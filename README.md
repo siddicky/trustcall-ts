@@ -33,7 +33,7 @@ const UserInfo = z.object({
 }).describe("UserInfo");
 
 // Create the extractor
-const llm = new ChatOpenAI({ model: "gpt-4" });
+const llm = new ChatOpenAI({ model: "gpt-4o-mini" });
 const extractor = createExtractor(llm, {
   tools: [UserInfo],
 });
