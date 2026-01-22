@@ -614,20 +614,23 @@ ${schemaStrings.join("\n")}
       input: ExtractionInputs | string | BaseMessage[],
       config?: RunnableConfig
     ): Promise<ExtractionOutputs> {
-      // Coerce input
-      let state: ExtractionInputs;
+      // Coerce input to proper state type
+      let messages: BaseMessage[];
+      let existing: ExistingType | undefined;
+
       if (typeof input === "string") {
-        state = { messages: [new HumanMessage({ content: input })] };
+        messages = [new HumanMessage({ content: input })];
       } else if (Array.isArray(input)) {
-        state = { messages: input };
+        messages = input;
       } else {
-        state = input;
-        if (typeof state.messages === "string") {
-          state.messages = [new HumanMessage({ content: state.messages })];
-        }
+        messages =
+          typeof input.messages === "string"
+            ? [new HumanMessage({ content: input.messages })]
+            : input.messages;
+        existing = input.existing;
       }
 
-      const result = await compiled.invoke(state, config);
+      const result = await compiled.invoke({ messages, existing }, config);
 
       // Filter and format output
       const msgId = result.msgId;
@@ -680,20 +683,23 @@ ${schemaStrings.join("\n")}
       input: ExtractionInputs | string | BaseMessage[],
       config?: RunnableConfig
     ) {
-      // For streaming, delegate to compiled graph
-      let state: ExtractionInputs;
+      // Coerce input to proper state type
+      let messages: BaseMessage[];
+      let existing: ExistingType | undefined;
+
       if (typeof input === "string") {
-        state = { messages: [new HumanMessage({ content: input })] };
+        messages = [new HumanMessage({ content: input })];
       } else if (Array.isArray(input)) {
-        state = { messages: input };
+        messages = input;
       } else {
-        state = input;
-        if (typeof state.messages === "string") {
-          state.messages = [new HumanMessage({ content: state.messages })];
-        }
+        messages =
+          typeof input.messages === "string"
+            ? [new HumanMessage({ content: input.messages })]
+            : input.messages;
+        existing = input.existing;
       }
 
-      return compiled.stream(state, config);
+      return compiled.stream({ messages, existing }, config);
     },
   };
 }
