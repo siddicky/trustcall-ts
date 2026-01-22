@@ -27,6 +27,7 @@ export type ExistingType =
  */
 export type ToolType =
   | z.ZodObject<z.ZodRawShape>
+  | z.ZodSchema
   | StructuredToolInterface
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   | ((...args: any[]) => any)
