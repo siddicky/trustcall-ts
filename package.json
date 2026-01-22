@@ -26,8 +26,12 @@
     "validation",
     "tool-calling"
   ],
-  "author": "",
+  "author": "Abdullah Siddique <abdullah.siddique94@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/siddicky/trustcall-ts.git"
+  },
   "dependencies": {
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
