@@ -1,13 +1,23 @@
 {
-  "name": "trustcalljs-examples",
+  "name": "@trustcalljs/examples",
+  "version": "0.1.0",
+  "exports": "./basic-extraction.ts",
+  "nodeModulesDir": "auto",
   "imports": {
-    "trustcalljs": "../dist/index.js",
+    "trustcalljs": "../dist/trustcall/index.js",
     "zod": "npm:zod@^3.22.0",
+    "uuid": "npm:uuid@^9.0.0",
+    "zod-to-json-schema": "npm:zod-to-json-schema@^3.22.0",
     "@langchain/openai": "npm:@langchain/openai@^0.3.0",
     "@langchain/anthropic": "npm:@langchain/anthropic@^0.3.0",
-    "@langchain/core": "npm:@langchain/core@^0.3.0"
+    "@langchain/core": "npm:@langchain/core@^0.3.0",
+    "@langchain/core/messages": "npm:@langchain/core@^0.3.0/messages",
+    "@langchain/core/runnables": "npm:@langchain/core@^0.3.0/runnables",
+    "@langchain/core/language_models/chat_models": "npm:@langchain/core@^0.3.0/language_models/chat_models",
+    "@langchain/core/tools": "npm:@langchain/core@^0.3.0/tools",
+    "@langchain/langgraph": "npm:@langchain/langgraph@^0.2.0"
   },
   "compilerOptions": {
-    "lib": ["deno.window", "ES2022"]
+    "lib": ["deno.window", "deno.ns", "ES2022"]
   }
 }
