@@ -254,7 +254,7 @@ export function createExtractor(
     state: typeof ExtractionStateAnnotation.State,
     config: RunnableConfig
   ): Promise<Partial<typeof ExtractionStateAnnotation.State>> {
-    const boundLlm = llm.bindTools(extractionTools, {
+    const boundLlm = toolLlm.bindTools(extractionTools, {
       tool_choice: toolChoice,
     });
 
@@ -362,7 +362,7 @@ ${schemaStrings.join("\n")}
       );
     }
 
-    const boundLlm = llm.bindTools(updateTools, {
+    const boundLlm = toolLlm.bindTools(updateTools, {
       tool_choice: enableDeletes ? "any" : "PatchDoc",
     });
 
@@ -478,7 +478,7 @@ ${schemaStrings.join("\n")}
       ),
     ];
 
-    const boundLlm = llm.bindTools(patchTools, { tool_choice: "any" });
+    const boundLlm = toolLlm.bindTools(patchTools, { tool_choice: "any" });
 
     try {
       const response = await boundLlm.invoke(state.messages, config);
