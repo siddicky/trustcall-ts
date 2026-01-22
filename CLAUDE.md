@@ -18,8 +18,23 @@ The solution uses **JSONPatch** (RFC 6902) to correct validation errors, reducin
 pnpm install          # Install dependencies
 pnpm build            # Compile TypeScript (tsc)
 pnpm test             # Run tests (vitest)
+pnpm test --run       # Run tests once (no watch)
 pnpm lint             # Run ESLint on src/
 ```
+
+## Examples (Deno Jupyter Notebooks)
+
+Interactive examples are in `examples/` directory using Deno Jupyter notebooks.
+
+```bash
+# Install Deno Jupyter kernel (one-time setup)
+deno jupyter --install
+
+# Open notebooks in VS Code with Jupyter extension, or run:
+jupyter lab
+```
+
+See `examples/README.md` for detailed setup instructions.
 
 ## Architecture
 
