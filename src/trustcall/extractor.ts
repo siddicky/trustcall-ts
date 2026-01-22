@@ -15,7 +15,11 @@ import {
   Send,
 } from "@langchain/langgraph";
 import type { RunnableConfig } from "@langchain/core/runnables";
-import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import type {
+  BaseChatModel,
+  BaseChatModelCallOptions,
+} from "@langchain/core/language_models/chat_models";
+import type { Runnable } from "@langchain/core/runnables";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 import type {
@@ -176,6 +180,19 @@ export function createExtractor(
   llm: BaseChatModel,
   options: ExtractorOptions
 ) {
+  // Verify the LLM supports tool binding
+  if (!llm.bindTools) {
+    throw new Error(
+      "The provided LLM does not support tool binding. " +
+        "Please use a model that supports tool calling (e.g., ChatOpenAI, ChatAnthropic)."
+    );
+  }
+
+  // Cast to a type that has bindTools defined
+  const toolLlm = llm as BaseChatModel & {
+    bindTools: NonNullable<BaseChatModel["bindTools"]>;
+  };
+
   const {
     tools,
     toolChoice,
