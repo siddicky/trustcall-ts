@@ -6,6 +6,7 @@
 
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
+import { HumanMessage } from "@langchain/core/messages";
 import { createExtractor } from "trustcalljs";
 
 // Define schemas for extraction
@@ -45,41 +46,92 @@ async function main() {
     temperature: 0,
   });
 
-  console.log("=== Example 1: Basic User Extraction ===\n");
+  // ==================================================
+  // Example 1: String input (simplest)
+  // ==================================================
+  console.log("=== Example 1: String input ===\n");
 
   const userExtractor = createExtractor(llm, {
     tools: [UserInfo],
   });
 
-  const userResult = await userExtractor.invoke({
-    messages:
-      "My name is Alice Johnson and I'm 30 years old. Email me at alice@example.com",
-  });
+  const userResult = await userExtractor.invoke(
+    "My name is Alice Johnson and I'm 30 years old. Email me at alice@example.com",
+  );
 
-  console.log("Extracted user:", JSON.stringify(userResult.responses[0], null, 2));
+  console.log(
+    "Extracted user:",
+    JSON.stringify(userResult.responses[0], null, 2),
+  );
   console.log(`Attempts needed: ${userResult.attempts}\n`);
 
-  console.log("=== Example 2: Complex Schema Extraction ===\n");
+  // ==================================================
+  // Example 2: Single HumanMessage input
+  // ==================================================
+  console.log("=== Example 2: Single HumanMessage input ===\n");
 
   const companyExtractor = createExtractor(llm, {
     tools: [CompanyProfile],
   });
 
-  const companyResult = await companyExtractor.invoke({
-    messages: `
-      Anthropic is an AI safety company founded in 2021.
-      They're headquartered in San Francisco, USA.
-      Their main products are Claude (an AI assistant) and the Claude API.
-    `,
+  const companyResult = await companyExtractor.invoke(
+    new HumanMessage(
+      `Anthropic is an AI safety company founded in 2021.
+They're headquartered in San Francisco, USA.
+Their main products are Claude (an AI assistant) and the Claude API.`,
+    ),
+  );
+
+  console.log(
+    "Extracted company:",
+    JSON.stringify(companyResult.responses[0], null, 2),
+  );
+  console.log(`Attempts needed: ${companyResult.attempts}\n`);
+
+  // ==================================================
+  // Example 3: Array of BaseMessage (LangGraph MessagesValue)
+  // ==================================================
+  console.log("=== Example 3: Array of BaseMessage (LangGraph style) ===\n");
+
+  const msgArrayResult = await companyExtractor.invoke({
+    messages: [
+      new HumanMessage(
+        "Google was founded in 1998 in Mountain View, USA. They make Search, Chrome, and Android.",
+      ),
+    ],
   });
 
   console.log(
     "Extracted company:",
-    JSON.stringify(companyResult.responses[0], null, 2)
+    JSON.stringify(msgArrayResult.responses[0], null, 2),
   );
-  console.log(`Attempts needed: ${companyResult.attempts}\n`);
+  console.log(`Attempts needed: ${msgArrayResult.attempts}\n`);
 
-  console.log("=== Example 3: Updating Existing Data ===\n");
+  // ==================================================
+  // Example 4: OpenAI-style message dict format
+  // ==================================================
+  console.log("=== Example 4: OpenAI-style message dict format ===\n");
+
+  const dictResult = await companyExtractor.invoke({
+    messages: [
+      {
+        role: "user",
+        content:
+          "Microsoft was founded in 1975 in Redmond, USA. Products include Windows, Office, and Azure.",
+      },
+    ],
+  });
+
+  console.log(
+    "Extracted company:",
+    JSON.stringify(dictResult.responses[0], null, 2),
+  );
+  console.log(`Attempts needed: ${dictResult.attempts}\n`);
+
+  // ==================================================
+  // Example 5: Updating existing data with patches
+  // ==================================================
+  console.log("=== Example 5: Updating Existing Data ===\n");
 
   const UserPreferences = z
     .object({
@@ -111,13 +163,18 @@ async function main() {
   });
 
   const updateResult = await updateExtractor.invoke({
-    messages: "Switch to dark theme and add purple to my favorite colors",
+    messages: [
+      {
+        role: "user",
+        content: "Switch to dark theme and add purple to my favorite colors",
+      },
+    ],
     existing: existingData,
   });
 
   console.log(
     "\nUpdated data:",
-    JSON.stringify(updateResult.responses[0], null, 2)
+    JSON.stringify(updateResult.responses[0], null, 2),
   );
   console.log(`Attempts needed: ${updateResult.attempts}`);
 }
