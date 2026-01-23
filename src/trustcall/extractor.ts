@@ -6,14 +6,10 @@ import {
   HumanMessage,
   SystemMessage,
   ToolMessage,
+  isAIMessage,
+  isBaseMessage,
 } from "@langchain/core/messages";
-import {
-  Annotation,
-  StateGraph,
-  START,
-  END,
-  Send,
-} from "@langchain/langgraph";
+import { Annotation, StateGraph, START, END, Send } from "@langchain/langgraph";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -46,17 +42,6 @@ export interface MessageDict {
 }
 
 /**
- * Tuple message format: [role, content] or (role, content)
- * Matches Python's MessageLikeRepresentation tuple format.
- */
-export type MessageTuple = [string, string];
-
-/**
- * Union type for all message-like inputs.
- */
-export type MessageLike = BaseMessage | MessageDict | MessageTuple | string;
-
-/**
  * Check if an object is a MessageDict (OpenAI-style message).
  */
 function isMessageDict(obj: unknown): obj is MessageDict {
@@ -73,43 +58,24 @@ function isMessageDict(obj: unknown): obj is MessageDict {
 }
 
 /**
- * Check if an object is a message tuple [role, content].
+ * Check if an array contains MessageDict objects (OpenAI-style messages).
  */
-function isMessageTuple(obj: unknown): obj is MessageTuple {
-  return (
-    Array.isArray(obj) &&
-    obj.length === 2 &&
-    typeof obj[0] === "string" &&
-    typeof obj[1] === "string"
-  );
+function isMessageDictArray(arr: unknown[]): arr is MessageDict[] {
+  return arr.length > 0 && arr.every((item) => isMessageDict(item));
 }
 
 /**
- * Check if an array contains message-like objects (dict or tuple format).
+ * Check if an array contains BaseMessage objects.
  */
-function isMessageLikeArray(
-  arr: unknown[]
-): arr is Array<MessageDict | MessageTuple> {
-  return arr.length > 0 && arr.every((item) => isMessageDict(item) || isMessageTuple(item));
+function isBaseMessageArray(arr: unknown[]): arr is BaseMessage[] {
+  return arr.length > 0 && arr.every((item) => isBaseMessage(item));
 }
 
 /**
- * Convert a single message-like object to a BaseMessage.
+ * Convert a MessageDict (OpenAI-style) to a BaseMessage.
  */
-function convertMessageLike(msg: MessageDict | MessageTuple): BaseMessage {
-  let role: string;
-  let content: string;
-  let toolCallId: string | undefined;
-  let name: string | undefined;
-
-  if (isMessageTuple(msg)) {
-    [role, content] = msg;
-  } else {
-    role = msg.role;
-    content = msg.content;
-    toolCallId = msg.tool_call_id;
-    name = msg.name;
-  }
+function convertMessageDict(msg: MessageDict): BaseMessage {
+  const { role, content, tool_call_id, name } = msg;
 
   switch (role) {
     case "system":
@@ -123,7 +89,7 @@ function convertMessageLike(msg: MessageDict | MessageTuple): BaseMessage {
     case "tool":
       return new ToolMessage({
         content,
-        tool_call_id: toolCallId || "",
+        tool_call_id: tool_call_id || "",
         name,
       });
     default:
@@ -132,19 +98,25 @@ function convertMessageLike(msg: MessageDict | MessageTuple): BaseMessage {
 }
 
 /**
- * Convert an array of message-like objects to BaseMessage array.
+ * Convert an array of MessageDict objects to BaseMessage array.
  */
-function convertMessageLikes(
-  messages: Array<MessageDict | MessageTuple>
-): BaseMessage[] {
-  return messages.map(convertMessageLike);
+function convertMessageDicts(messages: MessageDict[]): BaseMessage[] {
+  return messages.map(convertMessageDict);
 }
 
 /**
  * Extraction inputs type.
+ *
+ * The `messages` field supports LangGraph's MessagesValue annotation format:
+ * - Array of BaseMessage instances
+ * - Array of MessageDict (OpenAI-style { role, content })
+ *
+ * For simple extraction, you can also call invoke() directly with:
+ * - A string
+ * - A single BaseMessage
  */
 export interface ExtractionInputs {
-  messages: BaseMessage[] | MessageDict[] | MessageTuple[] | MessageLike[] | string;
+  messages: BaseMessage[] | MessageDict[];
   existing?: ExistingType;
 }
 
