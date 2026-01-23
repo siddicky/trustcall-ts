@@ -81,10 +81,9 @@ export class ValidationNode {
     this.schemasByName = new Map();
 
     for (const schema of schemas) {
-      if (schema instanceof z.ZodObject) {
-        // Zod schema - use the description or a generated name
-        const name =
-          (schema.description as string) || `Schema_${this.schemasByName.size}`;
+      if (isZodSchema(schema)) {
+        // Any Zod schema - use the description or a generated name
+        const name = getSchemaName(schema, `Schema_${this.schemasByName.size}`);
         this.schemasByName.set(name, schema);
       } else if (this.isStructuredTool(schema)) {
         // Structured tool

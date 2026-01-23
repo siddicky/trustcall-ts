@@ -224,8 +224,9 @@ function ensureTools(tools: ToolType[]): Map<string, z.ZodSchema> {
   const result = new Map<string, z.ZodSchema>();
 
   for (const tool of tools) {
-    if (tool instanceof z.ZodObject) {
-      const name = tool.description || `Schema_${result.size}`;
+    if (isZodSchema(tool)) {
+      // Any Zod schema - use description or generated name
+      const name = getSchemaName(tool, `Schema_${result.size}`);
       result.set(name, tool);
     } else if (typeof tool === "object" && "name" in tool) {
       // Already in correct format or structured tool
@@ -310,17 +311,16 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
   // Create validation node
   const validator = new ValidationNode(
     Array.from(toolSchemas.entries()).map(([name, schema]) => {
-      if (schema instanceof z.ZodObject) {
+      if (isZodSchema(schema)) {
         return schema.describe(name);
       }
       return schema;
     }),
     {
       formatError: (error, call, schema) => {
-        const jsonSchema =
-          schema instanceof z.ZodObject
-            ? JSON.stringify(zodToJsonSchema(schema), null, 2)
-            : "{}";
+        const jsonSchema = isZodSchema(schema)
+          ? JSON.stringify(zodToJsonSchema(schema as z.ZodSchema), null, 2)
+          : "{}";
         return (
           `Error:\n\n\`\`\`\n${error.message}\n\`\`\`\n` +
           `Expected Parameter Schema:\n\n\`\`\`json\n${jsonSchema}\n\`\`\`\n` +
@@ -334,8 +334,8 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
   // Build the extraction tools for LLM binding
   const extractionTools = toolNames.map((name) => {
     const schema = toolSchemas.get(name);
-    if (schema instanceof z.ZodObject) {
-      return zodToOpenAIFunction(schema, name);
+    if (isZodSchema(schema)) {
+      return zodToOpenAIFunction(schema as z.ZodObject<z.ZodRawShape>, name);
     }
     return {
       type: "function" as const,
@@ -393,8 +393,10 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
     if (enableInserts) {
       for (const name of toolNames) {
         const schema = toolSchemas.get(name);
-        if (schema instanceof z.ZodObject) {
-          updateTools.push(zodToOpenAIFunction(schema, name));
+        if (isZodSchema(schema)) {
+          updateTools.push(
+            zodToOpenAIFunction(schema as z.ZodObject<z.ZodRawShape>, name)
+          );
         }
       }
     }
@@ -404,10 +406,9 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
     if (typeof existing === "object" && !Array.isArray(existing)) {
       for (const [k, v] of Object.entries(existing)) {
         const schema = toolSchemas.get(k);
-        const schemaJson =
-          schema instanceof z.ZodObject
-            ? JSON.stringify(zodToJsonSchema(schema), null, 2)
-            : "object";
+        const schemaJson = isZodSchema(schema)
+          ? JSON.stringify(zodToJsonSchema(schema as z.ZodSchema), null, 2)
+          : "object";
         schemaStrings.push(
           `<schema id="${k}">\n<instance>\n${JSON.stringify(v, null, 2)}\n</instance>\n<json_schema>\n${schemaJson}\n</json_schema></schema>`
         );
