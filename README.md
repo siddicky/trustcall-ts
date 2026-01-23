@@ -1,4 +1,4 @@
-# 🤝 TrustCallJS
+# 🤝 TrustcallTS
 
 TypeScript port of [trustcall](https://github.com/hinthornw/trustcall) - Utilities for validated tool calling and extraction with retries using LLMs.
 
@@ -10,14 +10,14 @@ Built on top of [@langchain/langgraph](https://github.com/langchain-ai/langgraph
 npm install trustcalljs @langchain/langgraph @langchain/core
 ```
 
-## Why TrustCallJS?
+## Why TrustcallTS?
 
 [Tool calling](https://js.langchain.com/docs/how_to/tool_calling/) makes it easier to compose LLM calls within reliable software systems, but LLMs today can be error prone and inefficient in two common scenarios:
 
 1. **Populating complex, nested schemas** - LLMs often make validation errors on deeply nested structures
 2. **Updating existing schemas without information loss** - Regenerating entire objects can lose important data
 
-TrustCallJS solves these problems using **JSONPatch** to correct validation errors, reducing costs and improving reliability.
+TrustcallTS solves these problems using **JSONPatch** to correct validation errors, reducing costs and improving reliability.
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ console.log(result.responses[0]);
 
 ### Complex Schema Extraction
 
-TrustCallJS handles complex, deeply nested schemas that often cause validation errors:
+TrustcallTS handles complex, deeply nested schemas that often cause validation errors:
 
 ```typescript
 const TelegramPreferences = z.object({
@@ -70,7 +70,7 @@ const extractor = createExtractor(llm, {
   tools: [TelegramPreferences],
 });
 
-// Even with complex schemas, TrustCallJS will retry and fix validation errors
+// Even with complex schemas, TrustcallTS will retry and fix validation errors
 const result = await extractor.invoke({
   messages: `Extract preferences from: 
     User: I'd like morse code on daredevil paper`,
@@ -122,7 +122,7 @@ const result = await extractor.invoke({
 
 ### Validation and Retries
 
-TrustCallJS automatically:
+TrustcallTS automatically:
 - Validates tool call outputs against your schemas
 - Generates JSONPatch operations to fix validation errors
 - Retries with corrections up to a configurable maximum

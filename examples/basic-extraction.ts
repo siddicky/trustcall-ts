@@ -1,5 +1,5 @@
 /**
- * TrustCallJS - Basic Extraction Example
+ * TrustcallTS - Basic Extraction Example
  *
  * Run with: deno run --allow-env --allow-net examples/basic-extraction.ts
  */

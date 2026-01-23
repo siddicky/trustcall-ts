@@ -1,5 +1,5 @@
 /**
- * TrustCallJS - Utilities for validated tool calling and extraction with retries using LLMs.
+ * TrustcallTS - Utilities for validated tool calling and extraction with retries using LLMs.
  *
  * This module provides functionality for creating extractors that can generate,
  * validate, and correct structured outputs from language models. It supports
