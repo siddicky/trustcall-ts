@@ -18,6 +18,8 @@ export interface ValidationNodeOptions {
   ) => string;
   /** Node name for tracing */
   name?: string;
+  /** Tags for tracing */
+  tags?: string[];
 }
 
 /**
@@ -46,6 +48,7 @@ export class ValidationNode {
     schema: z.ZodSchema
   ) => string;
   public name: string;
+  public tags: string[];
 
   constructor(
     schemas: ToolType[],
@@ -53,6 +56,7 @@ export class ValidationNode {
   ) {
     this.formatError = options.formatError || defaultFormatError;
     this.name = options.name || "validation";
+    this.tags = options.tags || [];
     this.schemasByName = new Map();
 
     for (const schema of schemas) {
