@@ -7,7 +7,8 @@
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage } from "@langchain/core/messages";
-import { createExtractor } from "trustcalljs";
+import { createExtractor } from "../dist/trustcall/index.js";
+import { config } from "dotenv";
 
 // Define schemas for extraction
 const UserInfo = z
@@ -34,16 +35,17 @@ const CompanyProfile = z
 
 async function main() {
   // Check for API key
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  const apiKey = config({ path: "./.env" }).parsed?.OPENAI_API_KEY;
+  console.log("Using OPENAI_API_KEY:", apiKey ? "FOUND" : "NOT FOUND");
   if (!apiKey) {
     console.error("Please set OPENAI_API_KEY environment variable");
-    Deno.exit(1);
+    process.exit(1);
   }
 
   // Initialize the LLM
   const llm = new ChatOpenAI({
-    model: "gpt-4o-mini",
-    temperature: 0,
+    model: "gpt-5-mini",
+    reasoningEffort: "low",
   });
 
   // ==================================================
@@ -56,13 +58,10 @@ async function main() {
   });
 
   const userResult = await userExtractor.invoke(
-    "My name is Alice Johnson and I'm 30 years old. Email me at alice@example.com",
+    "My name is Alice Johnson and I'm 30 years old. Email me at alice@example.com"
   );
 
-  console.log(
-    "Extracted user:",
-    JSON.stringify(userResult.responses[0], null, 2),
-  );
+  console.log("Extracted user:", JSON.stringify(userResult, null, 2));
   console.log(`Attempts needed: ${userResult.attempts}\n`);
 
   // ==================================================
@@ -78,13 +77,13 @@ async function main() {
     new HumanMessage(
       `Anthropic is an AI safety company founded in 2021.
 They're headquartered in San Francisco, USA.
-Their main products are Claude (an AI assistant) and the Claude API.`,
-    ),
+Their main products are Claude (an AI assistant) and the Claude API.`
+    )
   );
 
   console.log(
     "Extracted company:",
-    JSON.stringify(companyResult.responses[0], null, 2),
+    JSON.stringify(companyResult.responses[0], null, 2)
   );
   console.log(`Attempts needed: ${companyResult.attempts}\n`);
 
@@ -96,14 +95,14 @@ Their main products are Claude (an AI assistant) and the Claude API.`,
   const msgArrayResult = await companyExtractor.invoke({
     messages: [
       new HumanMessage(
-        "Google was founded in 1998 in Mountain View, USA. They make Search, Chrome, and Android.",
+        "Google was founded in 1998 in Mountain View, USA. They make Search, Chrome, and Android."
       ),
     ],
   });
 
   console.log(
     "Extracted company:",
-    JSON.stringify(msgArrayResult.responses[0], null, 2),
+    JSON.stringify(msgArrayResult.responses[0], null, 2)
   );
   console.log(`Attempts needed: ${msgArrayResult.attempts}\n`);
 
@@ -124,7 +123,7 @@ Their main products are Claude (an AI assistant) and the Claude API.`,
 
   console.log(
     "Extracted company:",
-    JSON.stringify(dictResult.responses[0], null, 2),
+    JSON.stringify(dictResult.responses[0], null, 2)
   );
   console.log(`Attempts needed: ${dictResult.attempts}\n`);
 
@@ -174,7 +173,7 @@ Their main products are Claude (an AI assistant) and the Claude API.`,
 
   console.log(
     "\nUpdated data:",
-    JSON.stringify(updateResult.responses[0], null, 2),
+    JSON.stringify(updateResult.responses[0], null, 2)
   );
   console.log(`Attempts needed: ${updateResult.attempts}`);
 }
