@@ -36,6 +36,22 @@ describe("ValidationNode", () => {
       const validator = new ValidationNode([UnnamedSchema]);
       expect(validator.schemasByName.has("Schema_0")).toBe(true);
     });
+
+    it("should accept custom name option", () => {
+      const validator = new ValidationNode([UserSchema], { name: "custom_validator" });
+      expect(validator.name).toBe("custom_validator");
+    });
+
+    it("should accept tags option", () => {
+      const validator = new ValidationNode([UserSchema], { tags: ["test", "validation"] });
+      expect(validator.tags).toEqual(["test", "validation"]);
+    });
+
+    it("should use default name and empty tags", () => {
+      const validator = new ValidationNode([UserSchema]);
+      expect(validator.name).toBe("validation");
+      expect(validator.tags).toEqual([]);
+    });
   });
 
   describe("invoke with array input", () => {
@@ -57,6 +73,7 @@ describe("ValidationNode", () => {
       expect(result).toHaveLength(1);
       expect(result[0]).toBeInstanceOf(ToolMessage);
       expect(result[0].tool_call_id).toBe("call-1");
+      expect(result[0].status).toBe("success");
       expect(result[0].additional_kwargs?.is_error).toBeUndefined();
     });
 
@@ -75,6 +92,7 @@ describe("ValidationNode", () => {
 
       const result = await validator.invoke([aiMessage]);
       expect(result).toHaveLength(1);
+      expect(result[0].status).toBe("error");
       expect(result[0].additional_kwargs?.is_error).toBe(true);
     });
 
@@ -93,13 +111,15 @@ describe("ValidationNode", () => {
 
       const result = await validator.invoke([aiMessage]);
       expect(result).toHaveLength(1);
+      expect(result[0].status).toBe("error");
       expect(result[0].additional_kwargs?.is_error).toBe(true);
       expect(result[0].content).toContain("Unrecognized tool name");
       expect(result[0].content).toContain("UnknownTool");
       expect(result[0].content).toContain("User");
+      expect(result[0].content).toContain("PatchFunctionName");
     });
 
-    it("should validate multiple tool calls", async () => {
+    it("should validate multiple tool calls in parallel", async () => {
       const validator = new ValidationNode([UserSchema, AddressSchema]);
       const aiMessage = new AIMessage({
         content: "Multiple calls",
@@ -119,8 +139,8 @@ describe("ValidationNode", () => {
 
       const result = await validator.invoke([aiMessage]);
       expect(result).toHaveLength(2);
-      expect(result[0].additional_kwargs?.is_error).toBeUndefined();
-      expect(result[1].additional_kwargs?.is_error).toBeUndefined();
+      expect(result[0].status).toBe("success");
+      expect(result[1].status).toBe("success");
     });
 
     it("should return mix of valid and invalid results", async () => {
@@ -143,7 +163,8 @@ describe("ValidationNode", () => {
 
       const result = await validator.invoke([aiMessage]);
       expect(result).toHaveLength(2);
-      expect(result[0].additional_kwargs?.is_error).toBeUndefined();
+      expect(result[0].status).toBe("success");
+      expect(result[1].status).toBe("error");
       expect(result[1].additional_kwargs?.is_error).toBe(true);
     });
   });
