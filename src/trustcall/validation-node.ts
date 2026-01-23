@@ -3,6 +3,7 @@ import {
   AIMessage,
   BaseMessage,
   ToolMessage,
+  isAIMessage,
 } from "@langchain/core/messages";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { StructuredToolInterface } from "@langchain/core/tools";
@@ -10,11 +11,7 @@ import type { ToolCall, ToolType } from "./types.js";
 
 export interface ValidationNodeOptions {
   /** Custom error formatter */
-  formatError?: (
-    error: Error,
-    call: ToolCall,
-    schema: z.ZodSchema
-  ) => string;
+  formatError?: (error: Error, call: ToolCall, schema: z.ZodSchema) => string;
   /** Node name for tracing */
   name?: string;
   /** Tags for tracing */
@@ -49,10 +46,7 @@ export class ValidationNode {
   public name: string;
   public tags: string[];
 
-  constructor(
-    schemas: ToolType[],
-    options: ValidationNodeOptions = {}
-  ) {
+  constructor(schemas: ToolType[], options: ValidationNodeOptions = {}) {
     this.formatError = options.formatError || defaultFormatError;
     this.name = options.name || "validation";
     this.tags = options.tags || [];
@@ -62,8 +56,7 @@ export class ValidationNode {
       if (schema instanceof z.ZodObject) {
         // Zod schema - use the description or a generated name
         const name =
-          (schema.description as string) ||
-          `Schema_${this.schemasByName.size}`;
+          (schema.description as string) || `Schema_${this.schemasByName.size}`;
         this.schemasByName.set(name, schema);
       } else if (this.isStructuredTool(schema)) {
         // Structured tool
@@ -81,9 +74,7 @@ export class ValidationNode {
     }
   }
 
-  private isStructuredTool(
-    obj: unknown
-  ): obj is StructuredToolInterface {
+  private isStructuredTool(obj: unknown): obj is StructuredToolInterface {
     return (
       typeof obj === "object" &&
       obj !== null &&
@@ -92,9 +83,7 @@ export class ValidationNode {
     );
   }
 
-  private jsonSchemaToZod(
-    _schema: Record<string, unknown>
-  ): z.ZodSchema {
+  private jsonSchemaToZod(_schema: Record<string, unknown>): z.ZodSchema {
     // Simplified JSON Schema to Zod conversion
     // In production, you'd want a more robust implementation
     return z.object({}).passthrough();
@@ -103,9 +92,10 @@ export class ValidationNode {
   /**
    * Get the last AIMessage from input.
    */
-  private getMessage(
-    input: BaseMessage[] | { messages: BaseMessage[] }
-  ): { outputType: "list" | "dict"; message: AIMessage } {
+  private getMessage(input: BaseMessage[] | { messages: BaseMessage[] }): {
+    outputType: "list" | "dict";
+    message: AIMessage;
+  } {
     let messages: BaseMessage[];
     let outputType: "list" | "dict";
 
@@ -118,11 +108,11 @@ export class ValidationNode {
     }
 
     const lastMessage = messages[messages.length - 1];
-    if (!(lastMessage instanceof AIMessage)) {
+    if (!isAIMessage(lastMessage)) {
       throw new Error("Last message is not an AIMessage");
     }
 
-    return { outputType, message: lastMessage };
+    return { outputType, message: lastMessage as AIMessage };
   }
 
   /**
