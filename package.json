@@ -1,6 +1,6 @@
 {
   "name": "trustcalljs",
-  "version": "0.2.3",
+  "version": "0.2.6",
   "description": "Utilities for validated tool calling and extraction with retries using LLMs - TypeScript port of trustcall",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,6 +17,8 @@
     "test:unit": "vitest --run --exclude 'tests/integration/**'",
     "test:integration": "vitest --run tests/integration",
     "lint": "eslint src",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts'",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
