@@ -6,7 +6,6 @@
     "npm:@langchain/langgraph@0.2": "0.2.74_@langchain+core@0.3.80__zod@3.25.76_zod-to-json-schema@3.25.1__zod@3.25.76_zod@3.25.76",
     "npm:@langchain/openai@*": "0.3.17_@langchain+core@0.3.80__zod@3.25.76_zod@3.25.76_openai@4.104.0__zod@3.25.76",
     "npm:@langchain/openai@0.3": "0.3.17_@langchain+core@0.3.80__zod@3.25.76_zod@3.25.76_openai@4.104.0__zod@3.25.76",
-    "npm:trustcalljs@*": "0.1.0_@langchain+anthropic@0.3.34__@langchain+core@0.3.80___zod@3.25.76__zod@3.25.76_@langchain+openai@0.3.17__@langchain+core@0.3.80___zod@3.25.76__zod@3.25.76__openai@4.104.0___zod@3.25.76_@langchain+core@0.3.80__zod@3.25.76_zod-to-json-schema@3.25.1__zod@3.25.76_zod@3.25.76",
     "npm:uuid@9": "9.0.1",
     "npm:zod-to-json-schema@^3.22.0": "3.25.1_zod@3.25.76",
     "npm:zod@*": "3.25.76",
@@ -441,22 +440,6 @@
     },
     "tr46@0.0.3": {
       "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="
-    },
-    "trustcalljs@0.1.0_@langchain+anthropic@0.3.34__@langchain+core@0.3.80___zod@3.25.76__zod@3.25.76_@langchain+openai@0.3.17__@langchain+core@0.3.80___zod@3.25.76__zod@3.25.76__openai@4.104.0___zod@3.25.76_@langchain+core@0.3.80__zod@3.25.76_zod-to-json-schema@3.25.1__zod@3.25.76_zod@3.25.76": {
-      "integrity": "sha512-6o714sLvca845nNZpj0KvoKheL/V516+EnuUY+U6A5TbZpEc26KfthRi+ievj1dVHpxxOVJHHgcFPF6FoooOug==",
-      "dependencies": [
-        "@langchain/anthropic",
-        "@langchain/core@0.3.80_zod@3.25.76",
-        "@langchain/langgraph",
-        "@langchain/openai",
-        "uuid@9.0.1",
-        "zod",
-        "zod-to-json-schema"
-      ],
-      "optionalPeers": [
-        "@langchain/anthropic",
-        "@langchain/openai"
-      ]
     },
     "ts-algebra@2.0.0": {
       "integrity": "sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw=="
