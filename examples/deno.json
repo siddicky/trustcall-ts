@@ -18,6 +18,10 @@
     "@langchain/langgraph": "npm:@langchain/langgraph@^0.2.0"
   },
   "compilerOptions": {
-    "lib": ["deno.window", "deno.ns", "ES2022"]
+    "lib": [
+      "deno.window",
+      "deno.ns",
+      "ES2022"
+    ]
   }
 }
