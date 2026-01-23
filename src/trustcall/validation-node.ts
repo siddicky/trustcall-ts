@@ -127,7 +127,54 @@ export class ValidationNode {
   }
 
   /**
-   * Validate and run tool calls.
+   * Validate a single tool call.
+   */
+  private validateOne(call: {
+    id?: string;
+    name: string;
+    args: Record<string, unknown>;
+  }): ToolMessage {
+    const toolCall: ToolCall = {
+      id: call.id || "",
+      name: call.name,
+      args: call.args as Record<string, unknown>,
+    };
+
+    const schema = this.schemasByName.get(toolCall.name);
+
+    if (!schema) {
+      const validNames = Array.from(this.schemasByName.keys()).join(", ");
+      return new ToolMessage({
+        content: `Unrecognized tool name: "${toolCall.name}". You only have access to the following tools: ${validNames}. Please call PatchFunctionName with the *correct* tool name to fix json_doc_id=[${toolCall.id}].`,
+        tool_call_id: toolCall.id,
+        name: toolCall.name,
+        status: "error",
+        additional_kwargs: { is_error: true },
+      });
+    }
+
+    try {
+      const result = schema.parse(toolCall.args);
+      return new ToolMessage({
+        content: JSON.stringify(result),
+        tool_call_id: toolCall.id,
+        name: toolCall.name,
+        status: "success",
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      return new ToolMessage({
+        content: this.formatError(error, toolCall, schema),
+        tool_call_id: toolCall.id,
+        name: toolCall.name,
+        status: "error",
+        additional_kwargs: { is_error: true },
+      });
+    }
+  }
+
+  /**
+   * Validate and run tool calls in parallel.
    */
   async invoke(
     input: BaseMessage[] | { messages: BaseMessage[] },
@@ -135,51 +182,20 @@ export class ValidationNode {
   ): Promise<ToolMessage[] | { messages: ToolMessage[] }> {
     const { outputType, message } = this.getMessage(input);
 
-    const outputs: ToolMessage[] = [];
+    const toolCalls = message.tool_calls || [];
 
-    for (const call of message.tool_calls || []) {
-      const toolCall: ToolCall = {
-        id: call.id || "",
-        name: call.name,
-        args: call.args as Record<string, unknown>,
-      };
-
-      const schema = this.schemasByName.get(toolCall.name);
-
-      if (!schema) {
-        const validNames = Array.from(this.schemasByName.keys()).join(", ");
-        outputs.push(
-          new ToolMessage({
-            content: `Unrecognized tool name: "${toolCall.name}". Available tools: ${validNames}`,
-            tool_call_id: toolCall.id,
-            name: toolCall.name,
-            additional_kwargs: { is_error: true },
+    // Run validations in parallel
+    const outputs = await Promise.all(
+      toolCalls.map((call) =>
+        Promise.resolve(
+          this.validateOne({
+            id: call.id,
+            name: call.name,
+            args: call.args as Record<string, unknown>,
           })
-        );
-        continue;
-      }
-
-      try {
-        const result = schema.parse(toolCall.args);
-        outputs.push(
-          new ToolMessage({
-            content: JSON.stringify(result),
-            tool_call_id: toolCall.id,
-            name: toolCall.name,
-          })
-        );
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
-        outputs.push(
-          new ToolMessage({
-            content: this.formatError(error, toolCall, schema),
-            tool_call_id: toolCall.id,
-            name: toolCall.name,
-            additional_kwargs: { is_error: true },
-          })
-        );
-      }
-    }
+        )
+      )
+    );
 
     return outputType === "list" ? outputs : { messages: outputs };
   }
