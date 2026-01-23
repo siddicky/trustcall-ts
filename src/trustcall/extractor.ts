@@ -190,6 +190,34 @@ function zodToOpenAIFunction(schema: z.ZodObject<z.ZodRawShape>, name: string) {
 }
 
 /**
+ * Check if a value is a Zod schema (any ZodType).
+ */
+function isZodSchema(value: unknown): value is z.ZodSchema {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_def" in value &&
+    typeof (value as z.ZodSchema).parse === "function"
+  );
+}
+
+/**
+ * Get the name/description from a Zod schema.
+ */
+function getSchemaName(schema: z.ZodSchema, fallback: string): string {
+  // Try to get description from the schema
+  if (schema.description) {
+    return schema.description;
+  }
+  // Check _def.description as fallback
+  const def = schema._def as { description?: string };
+  if (def.description) {
+    return def.description;
+  }
+  return fallback;
+}
+
+/**
  * Convert tools to a standardized format.
  */
 function ensureTools(tools: ToolType[]): Map<string, z.ZodSchema> {

@@ -30,6 +30,34 @@ function defaultFormatError(
 }
 
 /**
+ * Check if a value is a Zod schema (any ZodType).
+ */
+function isZodSchema(value: unknown): value is z.ZodSchema {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_def" in value &&
+    typeof (value as z.ZodSchema).parse === "function"
+  );
+}
+
+/**
+ * Get the name/description from a Zod schema.
+ */
+function getSchemaName(schema: z.ZodSchema, fallback: string): string {
+  // Try to get description from the schema
+  if (schema.description) {
+    return schema.description;
+  }
+  // Check _def.description as fallback
+  const def = schema._def as { description?: string };
+  if (def.description) {
+    return def.description;
+  }
+  return fallback;
+}
+
+/**
  * A node that validates all tool calls from the last AIMessage.
  *
  * This node does not actually run the tools, it only validates the tool calls,
