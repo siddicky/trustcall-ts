@@ -190,6 +190,45 @@ describe("applyJsonPatches", () => {
       expect(result).toEqual({ name: "Bob", nested: { value: 2 } });
     });
   });
+
+  describe("string concatenation fix", () => {
+    it("should convert array append on string to string concatenation", () => {
+      const target = { description: "Hello" };
+      const patches: JsonPatchOp[] = [
+        { op: "add", path: "/description/-", value: " World" },
+      ];
+      const result = applyJsonPatches(target, patches);
+      expect(result).toEqual({ description: "Hello World" });
+    });
+
+    it("should handle multiple string appends", () => {
+      const target = { text: "Start" };
+      const patches: JsonPatchOp[] = [
+        { op: "add", path: "/text/-", value: " middle" },
+        { op: "add", path: "/text/-", value: " end" },
+      ];
+      const result = applyJsonPatches(target, patches);
+      expect(result).toEqual({ text: "Start middle end" });
+    });
+
+    it("should still append to arrays normally", () => {
+      const target = { items: ["a", "b"] };
+      const patches: JsonPatchOp[] = [
+        { op: "add", path: "/items/-", value: "c" },
+      ];
+      const result = applyJsonPatches(target, patches);
+      expect(result).toEqual({ items: ["a", "b", "c"] });
+    });
+
+    it("should handle nested string paths", () => {
+      const target = { user: { bio: "Developer" } };
+      const patches: JsonPatchOp[] = [
+        { op: "add", path: "/user/bio/-", value: " and writer" },
+      ];
+      const result = applyJsonPatches(target, patches);
+      expect(result).toEqual({ user: { bio: "Developer and writer" } });
+    });
+  });
 });
 
 describe("ensurePatches", () => {
