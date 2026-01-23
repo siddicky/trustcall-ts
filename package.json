@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest",
-    "test:unit": "vitest --run --exclude tests/integration/**",
+    "test:unit": "vitest --run --exclude 'tests/integration/**'",
     "test:integration": "vitest --run tests/integration",
     "lint": "eslint src",
     "prepublishOnly": "npm run build"
