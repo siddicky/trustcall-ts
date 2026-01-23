@@ -6,7 +6,6 @@ import {
 } from "@langchain/core/messages";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { StructuredToolInterface } from "@langchain/core/tools";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import type { ToolCall, ToolType } from "./types.js";
 
 export interface ValidationNodeOptions {
