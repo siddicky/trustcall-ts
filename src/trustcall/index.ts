@@ -14,8 +14,6 @@ export {
   type ExtractionOutputs,
   type ExtractorOptions,
   type MessageDict,
-  type MessageTuple,
-  type MessageLike,
 } from "./extractor.js";
 
 export {
