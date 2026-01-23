@@ -41,10 +41,115 @@ import { ValidationNode } from "./validation-node.js";
 const DEFAULT_MAX_ATTEMPTS = 3;
 
 /**
+ * OpenAI-style message dictionary format.
+ */
+export interface MessageDict {
+  role: "system" | "user" | "assistant" | "tool" | "human" | "ai";
+  content: string;
+  tool_call_id?: string;
+  name?: string;
+}
+
+/**
+ * Tuple message format: [role, content] or (role, content)
+ * Matches Python's MessageLikeRepresentation tuple format.
+ */
+export type MessageTuple = [string, string];
+
+/**
+ * Union type for all message-like inputs.
+ */
+export type MessageLike = BaseMessage | MessageDict | MessageTuple | string;
+
+/**
+ * Check if an object is a MessageDict (OpenAI-style message).
+ */
+function isMessageDict(obj: unknown): obj is MessageDict {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "role" in obj &&
+    "content" in obj &&
+    typeof (obj as MessageDict).role === "string" &&
+    ["system", "user", "assistant", "tool", "human", "ai"].includes(
+      (obj as MessageDict).role
+    )
+  );
+}
+
+/**
+ * Check if an object is a message tuple [role, content].
+ */
+function isMessageTuple(obj: unknown): obj is MessageTuple {
+  return (
+    Array.isArray(obj) &&
+    obj.length === 2 &&
+    typeof obj[0] === "string" &&
+    typeof obj[1] === "string"
+  );
+}
+
+/**
+ * Check if an array contains message-like objects (dict or tuple format).
+ */
+function isMessageLikeArray(
+  arr: unknown[]
+): arr is Array<MessageDict | MessageTuple> {
+  return arr.length > 0 && arr.every((item) => isMessageDict(item) || isMessageTuple(item));
+}
+
+/**
+ * Convert a single message-like object to a BaseMessage.
+ */
+function convertMessageLike(msg: MessageDict | MessageTuple): BaseMessage {
+  let role: string;
+  let content: string;
+  let toolCallId: string | undefined;
+  let name: string | undefined;
+
+  if (isMessageTuple(msg)) {
+    [role, content] = msg;
+  } else {
+    role = msg.role;
+    content = msg.content;
+    toolCallId = msg.tool_call_id;
+    name = msg.name;
+  }
+
+  switch (role) {
+    case "system":
+      return new SystemMessage({ content });
+    case "user":
+    case "human":
+      return new HumanMessage({ content });
+    case "assistant":
+    case "ai":
+      return new AIMessage({ content });
+    case "tool":
+      return new ToolMessage({
+        content,
+        tool_call_id: toolCallId || "",
+        name,
+      });
+    default:
+      return new HumanMessage({ content });
+  }
+}
+
+/**
+ * Convert an array of message-like objects to BaseMessage array.
+ */
+function convertMessageLikes(
+  messages: Array<MessageDict | MessageTuple>
+): BaseMessage[] {
+  return messages.map(convertMessageLike);
+}
+
+/**
  * Extraction inputs type.
  */
 export interface ExtractionInputs {
-  messages: BaseMessage[] | string;
+  messages: BaseMessage[] | MessageDict[] | MessageTuple[] | MessageLike[] | string;
   existing?: ExistingType;
 }
 
@@ -611,7 +716,7 @@ ${schemaStrings.join("\n")}
   // Create the runnable interface
   return {
     async invoke(
-      input: ExtractionInputs | string | BaseMessage[],
+      input: ExtractionInputs | string | BaseMessage | MessageLike[],
       config?: RunnableConfig
     ): Promise<ExtractionOutputs> {
       // Coerce input to proper state type
@@ -620,13 +725,26 @@ ${schemaStrings.join("\n")}
 
       if (typeof input === "string") {
         messages = [new HumanMessage({ content: input })];
+      } else if (input instanceof BaseMessage) {
+        messages = [input];
       } else if (Array.isArray(input)) {
-        messages = input;
+        // Check if it's an array of MessageDict/MessageTuple or BaseMessage
+        if (isMessageLikeArray(input)) {
+          messages = convertMessageLikes(input);
+        } else {
+          messages = input as BaseMessage[];
+        }
       } else {
-        messages =
-          typeof input.messages === "string"
-            ? [new HumanMessage({ content: input.messages })]
-            : input.messages;
+        // ExtractionInputs object
+        if (typeof input.messages === "string") {
+          messages = [new HumanMessage({ content: input.messages })];
+        } else if (isMessageLikeArray(input.messages as unknown[])) {
+          messages = convertMessageLikes(
+            input.messages as Array<MessageDict | MessageTuple>
+          );
+        } else {
+          messages = input.messages as BaseMessage[];
+        }
         existing = input.existing;
       }
 
@@ -680,7 +798,7 @@ ${schemaStrings.join("\n")}
     },
 
     async stream(
-      input: ExtractionInputs | string | BaseMessage[],
+      input: ExtractionInputs | string | BaseMessage | MessageLike[],
       config?: RunnableConfig
     ) {
       // Coerce input to proper state type
@@ -689,13 +807,26 @@ ${schemaStrings.join("\n")}
 
       if (typeof input === "string") {
         messages = [new HumanMessage({ content: input })];
+      } else if (input instanceof BaseMessage) {
+        messages = [input];
       } else if (Array.isArray(input)) {
-        messages = input;
+        // Check if it's an array of MessageDict/MessageTuple or BaseMessage
+        if (isMessageLikeArray(input)) {
+          messages = convertMessageLikes(input);
+        } else {
+          messages = input as BaseMessage[];
+        }
       } else {
-        messages =
-          typeof input.messages === "string"
-            ? [new HumanMessage({ content: input.messages })]
-            : input.messages;
+        // ExtractionInputs object
+        if (typeof input.messages === "string") {
+          messages = [new HumanMessage({ content: input.messages })];
+        } else if (isMessageLikeArray(input.messages as unknown[])) {
+          messages = convertMessageLikes(
+            input.messages as Array<MessageDict | MessageTuple>
+          );
+        } else {
+          messages = input.messages as BaseMessage[];
+        }
         existing = input.existing;
       }
 
