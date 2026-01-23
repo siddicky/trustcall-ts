@@ -1,7 +1,35 @@
 import type { JsonPatchOp } from "./types.js";
 
 /**
+ * Resolve a JSON Pointer path to get the value at that location.
+ */
+function resolvePointer(
+  doc: Record<string, unknown>,
+  path: string
+): unknown {
+  const parts = path.split("/").filter((p) => p !== "");
+  let current: unknown = doc;
+
+  for (const part of parts) {
+    if (current === null || current === undefined) {
+      return undefined;
+    }
+    if (Array.isArray(current)) {
+      const index = parseInt(part, 10);
+      current = current[index];
+    } else if (typeof current === "object") {
+      current = (current as Record<string, unknown>)[part];
+    } else {
+      return undefined;
+    }
+  }
+
+  return current;
+}
+
+/**
  * Apply JSON patches to an object following RFC 6902.
+ * Includes edge case handling for string concatenation.
  */
 export function applyJsonPatches(
   target: Record<string, unknown>,
@@ -10,6 +38,32 @@ export function applyJsonPatches(
   let result = JSON.parse(JSON.stringify(target)); // Deep clone
 
   for (const patch of patches) {
+    // Check for string concatenation edge case before processing
+    // LLM sometimes tries to append to a string using /- syntax
+    if (patch.op === "add" && patch.path.endsWith("/-")) {
+      const basePath = patch.path.slice(0, -2);
+      const existing = resolvePointer(result, basePath);
+      if (typeof existing === "string") {
+        // Convert to a replace operation that concatenates
+        const basePathParts = basePath.split("/").filter((p) => p !== "");
+        let parent = result;
+        for (let i = 0; i < basePathParts.length - 1; i++) {
+          const key = basePathParts[i];
+          if (key) {
+            parent = parent[key] as Record<string, unknown>;
+          }
+        }
+        const lastKey = basePathParts[basePathParts.length - 1];
+        if (lastKey) {
+          parent[lastKey] = existing + String(patch.value);
+        } else {
+          // Root level string (unlikely but handle it)
+          result = (existing + String(patch.value)) as unknown as Record<string, unknown>;
+        }
+        continue;
+      }
+    }
+
     const pathParts = patch.path.split("/").filter((p) => p !== "");
 
     switch (patch.op) {
