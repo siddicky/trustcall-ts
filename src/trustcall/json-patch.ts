@@ -3,10 +3,7 @@ import type { JsonPatchOp } from "./types.js";
 /**
  * Resolve a JSON Pointer path to get the value at that location.
  */
-function resolvePointer(
-  doc: Record<string, unknown>,
-  path: string
-): unknown {
+function resolvePointer(doc: Record<string, unknown>, path: string): unknown {
   const parts = path.split("/").filter((p) => p !== "");
   let current: unknown = doc;
 
@@ -58,7 +55,10 @@ export function applyJsonPatches(
           parent[lastKey] = existing + String(patch.value);
         } else {
           // Root level string (unlikely but handle it)
-          result = (existing + String(patch.value)) as unknown as Record<string, unknown>;
+          result = (existing + String(patch.value)) as unknown as Record<
+            string,
+            unknown
+          >;
         }
         continue;
       }

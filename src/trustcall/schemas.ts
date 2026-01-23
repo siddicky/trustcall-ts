@@ -70,7 +70,9 @@ export function createRemoveDocSchema(allowedIds: string[]) {
       .refine((val) => allowedIds.includes(val), {
         message: `Document ID must be one of: ${allowedIds.join(", ")}`,
       })
-      .describe(`ID of the document to remove. Must be one of: ${allowedIds.join(", ")}`),
+      .describe(
+        `ID of the document to remove. Must be one of: ${allowedIds.join(", ")}`
+      ),
   });
 }
 
@@ -88,15 +90,11 @@ export function createPatchFunctionNameSchema(validToolNames?: string[]) {
       .describe("The json_doc_id of the function you are patching."),
     reasoning: z
       .array(z.string())
-      .describe(
-        "At least 2 logical reasons why this action should be taken."
-      ),
+      .describe("At least 2 logical reasons why this action should be taken."),
     fixed_name: z
       .string()
       .optional()
-      .describe(
-        `The corrected name of the function.${nameDescription}`
-      ),
+      .describe(`The corrected name of the function.${nameDescription}`),
   });
 }
 
