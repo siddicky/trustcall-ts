@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-TrustCallJS is a TypeScript port of the Python [trustcall](https://github.com/hinthornw/trustcall) library. It provides utilities for validated tool calling and extraction with retries using LLMs, built on top of @langchain/langgraph.
+TrustcallTS is a TypeScript port of the Python [trustcall](https://github.com/hinthornw/trustcall) library. It provides utilities for validated tool calling and extraction with retries using LLMs, built on top of @langchain/langgraph.
 
 The library solves two common LLM challenges:
 1. **Complex nested schema extraction** - LLMs often make validation errors on deeply nested structures

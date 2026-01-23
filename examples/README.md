@@ -1,6 +1,6 @@
-# TrustCallJS Examples
+# TrustcallTS Examples
 
-Interactive Jupyter notebooks demonstrating TrustCallJS features using Deno.
+Interactive Jupyter notebooks demonstrating TrustcallTS features using Deno.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ Interactive Jupyter notebooks demonstrating TrustCallJS features using Deno.
    deno jupyter --install
    ```
 
-4. **Build TrustCallJS** (from project root):
+4. **Build TrustcallTS** (from project root):
    ```bash
    pnpm install
    pnpm build
@@ -63,7 +63,7 @@ Then navigate to the `examples/` directory and open any notebook.
 
 | Notebook | Description |
 |----------|-------------|
-| `getting-started.ipynb` | Introduction to TrustCallJS basics |
+| `getting-started.ipynb` | Introduction to TrustcallTS basics |
 
 ## Notes
 
