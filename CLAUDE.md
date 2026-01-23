@@ -69,9 +69,41 @@ The graph flow: START → extract/extractUpdates → validate → (patch if erro
 5. Patches are applied and revalidated
 6. Process repeats until valid or max_attempts reached (default: 3)
 
+### Input Formats
+
+The `createExtractor()` function accepts these input formats via `invoke()` and `stream()`:
+
+1. **String** - Converted to `HumanMessage` internally
+   ```typescript
+   extractor.invoke("My name is Alice")
+   ```
+
+2. **Single BaseMessage** - Any LangChain message type
+   ```typescript
+   extractor.invoke(new HumanMessage("My name is Alice"))
+   ```
+
+3. **Object with messages array** - For LangGraph `MessagesValue` compatibility
+   ```typescript
+   // Array of BaseMessage instances
+   extractor.invoke({ messages: [new HumanMessage("...")] })
+
+   // OpenAI-style message dicts
+   extractor.invoke({ messages: [{ role: "user", content: "..." }] })
+   ```
+
+4. **With existing data** - For schema updates
+   ```typescript
+   extractor.invoke({
+     messages: [{ role: "user", content: "..." }],
+     existing: { SchemaName: { ... } }
+   })
+   ```
+
 ### Key Patterns
 
 - Uses `zod-to-json-schema` to convert Zod schemas to OpenAI function format
 - State managed via LangGraph's `Annotation.Root` with custom reducers
 - Tool calls identified by `id` field, tracked across patch/validation cycles
 - Existing data can be dict-style `{SchemaName: {...}}` or array of `SchemaInstance`
+- Uses LangChain's `isAIMessage()` and `isBaseMessage()` for duck-typed message detection (avoids `instanceof` issues across package boundaries)
