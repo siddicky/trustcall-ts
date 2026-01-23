@@ -5,7 +5,10 @@ import {
   SystemMessage,
   ToolMessage,
 } from "@langchain/core/messages";
-import { getHistoryForToolCall, applyMessageOps } from "../src/trustcall/utils.js";
+import {
+  getHistoryForToolCall,
+  applyMessageOps,
+} from "../src/trustcall/utils.js";
 
 describe("getHistoryForToolCall", () => {
   it("should return messages relevant to a specific tool call", () => {
@@ -98,9 +101,10 @@ describe("applyMessageOps", () => {
       const msg2 = new HumanMessage({ content: "World" });
       msg2.id = "msg-2";
 
-      const result = applyMessageOps([msg1, msg2], [
-        { op: "delete", target: "msg-1" },
-      ]);
+      const result = applyMessageOps(
+        [msg1, msg2],
+        [{ op: "delete", target: "msg-1" }]
+      );
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("msg-2");
@@ -110,9 +114,10 @@ describe("applyMessageOps", () => {
       const msg = new HumanMessage({ content: "Hello" });
       msg.id = "msg-1";
 
-      const result = applyMessageOps([msg], [
-        { op: "delete", target: "non-existent" },
-      ]);
+      const result = applyMessageOps(
+        [msg],
+        [{ op: "delete", target: "non-existent" }]
+      );
 
       expect(result).toHaveLength(1);
     });
@@ -122,22 +127,23 @@ describe("applyMessageOps", () => {
     it("should update tool call in AIMessage", () => {
       const aiMsg = new AIMessage({
         content: "Calling tool",
-        tool_calls: [
-          { id: "call-1", name: "OldTool", args: { old: "value" } },
-        ],
+        tool_calls: [{ id: "call-1", name: "OldTool", args: { old: "value" } }],
       });
       aiMsg.id = "ai-msg";
 
-      const result = applyMessageOps([aiMsg], [
-        {
-          op: "update_tool_call",
-          target: {
-            id: "call-1",
-            name: "NewTool",
-            args: { new: "value" },
+      const result = applyMessageOps(
+        [aiMsg],
+        [
+          {
+            op: "update_tool_call",
+            target: {
+              id: "call-1",
+              name: "NewTool",
+              args: { new: "value" },
+            },
           },
-        },
-      ]);
+        ]
+      );
 
       expect(result).toHaveLength(1);
       const updatedAi = result[0] as AIMessage;
@@ -154,12 +160,15 @@ describe("applyMessageOps", () => {
         ],
       });
 
-      const result = applyMessageOps([aiMsg], [
-        {
-          op: "update_tool_call",
-          target: { id: "call-1", name: "UpdatedTool1", args: { a: 10 } },
-        },
-      ]);
+      const result = applyMessageOps(
+        [aiMsg],
+        [
+          {
+            op: "update_tool_call",
+            target: { id: "call-1", name: "UpdatedTool1", args: { a: 10 } },
+          },
+        ]
+      );
 
       const updatedAi = result[0] as AIMessage;
       expect(updatedAi.tool_calls?.[0].name).toBe("UpdatedTool1");
@@ -178,12 +187,15 @@ describe("applyMessageOps", () => {
         ],
       });
 
-      const result = applyMessageOps([aiMsg], [
-        {
-          op: "update_tool_name",
-          target: { id: "call-1", name: "NewName" },
-        },
-      ]);
+      const result = applyMessageOps(
+        [aiMsg],
+        [
+          {
+            op: "update_tool_name",
+            target: { id: "call-1", name: "NewName" },
+          },
+        ]
+      );
 
       const updatedAi = result[0] as AIMessage;
       expect(updatedAi.tool_calls?.[0].name).toBe("NewName");

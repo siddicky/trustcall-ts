@@ -38,12 +38,16 @@ describe("ValidationNode", () => {
     });
 
     it("should accept custom name option", () => {
-      const validator = new ValidationNode([UserSchema], { name: "custom_validator" });
+      const validator = new ValidationNode([UserSchema], {
+        name: "custom_validator",
+      });
       expect(validator.name).toBe("custom_validator");
     });
 
     it("should accept tags option", () => {
-      const validator = new ValidationNode([UserSchema], { tags: ["test", "validation"] });
+      const validator = new ValidationNode([UserSchema], {
+        tags: ["test", "validation"],
+      });
       expect(validator.tags).toEqual(["test", "validation"]);
     });
 
@@ -185,7 +189,9 @@ describe("ValidationNode", () => {
 
       const result = await validator.invoke({ messages: [aiMessage] });
       expect(result).toHaveProperty("messages");
-      expect(Array.isArray((result as { messages: ToolMessage[] }).messages)).toBe(true);
+      expect(
+        Array.isArray((result as { messages: ToolMessage[] }).messages)
+      ).toBe(true);
     });
   });
 
