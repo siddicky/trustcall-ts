@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { applyJsonPatches, ensurePatches } from "../src/trustcall/json-patch.js";
+import {
+  applyJsonPatches,
+  ensurePatches,
+} from "../src/trustcall/json-patch.js";
 import type { JsonPatchOp } from "../src/trustcall/types.js";
 
 describe("applyJsonPatches", () => {

@@ -80,8 +80,7 @@ const UserPreferences = z
 
 // Helper to check if API key is available
 function hasApiKey(provider: "openai" | "anthropic"): boolean {
-  const envVar =
-    provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
+  const envVar = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
   return !!process.env[envVar];
 }
 
@@ -338,8 +337,7 @@ function runProviderTests(
         });
 
         const result = await extractor.invoke({
-          messages:
-            "User: Alice (25 years old) with a score of 85 out of 100",
+          messages: "User: Alice (25 years old) with a score of 85 out of 100",
         });
 
         expect(result.responses).toHaveLength(1);
@@ -584,7 +582,8 @@ describe.skipIf(!anthropicAvailable)("Anthropic Provider", () => {
 const bothAvailable = openaiAvailable && anthropicAvailable;
 describe.skipIf(!bothAvailable)("Cross-Provider Comparison", () => {
   it("should produce consistent results across providers", async () => {
-    const testInput = "John Smith is 35 years old and his email is john@test.com";
+    const testInput =
+      "John Smith is 35 years old and his email is john@test.com";
 
     const openaiLlm = await createLlm("openai");
     const anthropicLlm = await createLlm("anthropic");
