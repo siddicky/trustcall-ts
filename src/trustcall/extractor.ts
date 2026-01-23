@@ -191,9 +191,7 @@ function zodToOpenAIFunction(schema: z.ZodObject<z.ZodRawShape>, name: string) {
 /**
  * Convert tools to a standardized format.
  */
-function ensureTools(
-  tools: ToolType[]
-): Map<string, z.ZodSchema> {
+function ensureTools(tools: ToolType[]): Map<string, z.ZodSchema> {
   const result = new Map<string, z.ZodSchema>();
 
   for (const tool of tools) {
@@ -248,10 +246,7 @@ function ensureTools(
  * // { name: "Alice", age: 30 }
  * ```
  */
-export function createExtractor(
-  llm: BaseChatModel,
-  options: ExtractorOptions
-) {
+export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
   // Verify the LLM supports tool binding
   if (!llm.bindTools) {
     throw new Error(
@@ -293,9 +288,10 @@ export function createExtractor(
     }),
     {
       formatError: (error, call, schema) => {
-        const jsonSchema = schema instanceof z.ZodObject 
-          ? JSON.stringify(zodToJsonSchema(schema), null, 2)
-          : "{}";
+        const jsonSchema =
+          schema instanceof z.ZodObject
+            ? JSON.stringify(zodToJsonSchema(schema), null, 2)
+            : "{}";
         return (
           `Error:\n\n\`\`\`\n${error.message}\n\`\`\`\n` +
           `Expected Parameter Schema:\n\n\`\`\`json\n${jsonSchema}\n\`\`\`\n` +
@@ -379,9 +375,10 @@ export function createExtractor(
     if (typeof existing === "object" && !Array.isArray(existing)) {
       for (const [k, v] of Object.entries(existing)) {
         const schema = toolSchemas.get(k);
-        const schemaJson = schema instanceof z.ZodObject
-          ? JSON.stringify(zodToJsonSchema(schema), null, 2)
-          : "object";
+        const schemaJson =
+          schema instanceof z.ZodObject
+            ? JSON.stringify(zodToJsonSchema(schema), null, 2)
+            : "object";
         schemaStrings.push(
           `<schema id="${k}">\n<instance>\n${JSON.stringify(v, null, 2)}\n</instance>\n<json_schema>\n${schemaJson}\n</json_schema></schema>`
         );
@@ -431,7 +428,10 @@ ${schemaStrings.join("\n")}
         : Object.keys(existing);
       removalSchema = createRemoveDocSchema(existingIds);
       updateTools.push(
-        zodToOpenAIFunction(removalSchema as z.ZodObject<z.ZodRawShape>, "RemoveDoc")
+        zodToOpenAIFunction(
+          removalSchema as z.ZodObject<z.ZodRawShape>,
+          "RemoveDoc"
+        )
       );
     }
 
@@ -577,7 +577,7 @@ ${schemaStrings.join("\n")}
           if (patches.length > 0) {
             // Find original tool call and apply patches
             for (const msg of state.messages) {
-              if (msg instanceof AIMessage) {
+              if (isAIMessage(msg)) {
                 for (const origTc of msg.tool_calls || []) {
                   if (origTc.id === targetId) {
                     const patchedArgs = applyJsonPatches(
@@ -623,7 +623,7 @@ ${schemaStrings.join("\n")}
     state: typeof ExtractionStateAnnotation.State
   ): "validate" | "extractUpdates" {
     const lastMsg = state.messages[state.messages.length - 1];
-    if (lastMsg instanceof AIMessage) {
+    if (isAIMessage(lastMsg)) {
       return "validate";
     }
     return "extractUpdates";
@@ -647,7 +647,7 @@ ${schemaStrings.join("\n")}
     // Check for validation errors
     for (let i = state.messages.length - 1; i >= 0; i--) {
       const msg = state.messages[i];
-      if (msg instanceof AIMessage) break;
+      if (isAIMessage(msg)) break;
 
       if (msg instanceof ToolMessage) {
         const isError = msg.additional_kwargs?.is_error;
@@ -684,7 +684,7 @@ ${schemaStrings.join("\n")}
   // Create the runnable interface
   return {
     async invoke(
-      input: ExtractionInputs | string | BaseMessage | MessageLike[],
+      input: ExtractionInputs | string | BaseMessage,
       config?: RunnableConfig
     ): Promise<ExtractionOutputs> {
       // Coerce input to proper state type
@@ -692,24 +692,18 @@ ${schemaStrings.join("\n")}
       let existing: ExistingType | undefined;
 
       if (typeof input === "string") {
+        // Simple string input
         messages = [new HumanMessage({ content: input })];
-      } else if (input instanceof BaseMessage) {
+      } else if (isBaseMessage(input)) {
+        // Single BaseMessage input
         messages = [input];
-      } else if (Array.isArray(input)) {
-        // Check if it's an array of MessageDict/MessageTuple or BaseMessage
-        if (isMessageLikeArray(input)) {
-          messages = convertMessageLikes(input);
-        } else {
-          messages = input as BaseMessage[];
-        }
       } else {
-        // ExtractionInputs object
-        if (typeof input.messages === "string") {
-          messages = [new HumanMessage({ content: input.messages })];
-        } else if (isMessageLikeArray(input.messages as unknown[])) {
-          messages = convertMessageLikes(
-            input.messages as Array<MessageDict | MessageTuple>
-          );
+        // ExtractionInputs object with { messages: [...], existing?: ... }
+        // Supports LangGraph MessagesValue format
+        if (isBaseMessageArray(input.messages as unknown[])) {
+          messages = input.messages as BaseMessage[];
+        } else if (isMessageDictArray(input.messages as unknown[])) {
+          messages = convertMessageDicts(input.messages as MessageDict[]);
         } else {
           messages = input.messages as BaseMessage[];
         }
@@ -721,7 +715,7 @@ ${schemaStrings.join("\n")}
       // Filter and format output
       const msgId = result.msgId;
       const aiMessage = result.messages.find(
-        (m: BaseMessage) => m.id === msgId && m instanceof AIMessage
+        (m: BaseMessage) => m.id === msgId && isAIMessage(m)
       ) as AIMessage | undefined;
 
       if (!aiMessage) {
@@ -741,7 +735,11 @@ ${schemaStrings.join("\n")}
 
       for (const tc of aiMessage.tool_calls || []) {
         const schema = toolSchemas.get(tc.name);
-        if (!schema || tc.name === "PatchDoc" || tc.name === "PatchFunctionErrors") {
+        if (
+          !schema ||
+          tc.name === "PatchDoc" ||
+          tc.name === "PatchFunctionErrors"
+        ) {
           continue;
         }
 
@@ -766,7 +764,7 @@ ${schemaStrings.join("\n")}
     },
 
     async stream(
-      input: ExtractionInputs | string | BaseMessage | MessageLike[],
+      input: ExtractionInputs | string | BaseMessage,
       config?: RunnableConfig
     ) {
       // Coerce input to proper state type
@@ -774,24 +772,18 @@ ${schemaStrings.join("\n")}
       let existing: ExistingType | undefined;
 
       if (typeof input === "string") {
+        // Simple string input
         messages = [new HumanMessage({ content: input })];
-      } else if (input instanceof BaseMessage) {
+      } else if (isBaseMessage(input)) {
+        // Single BaseMessage input
         messages = [input];
-      } else if (Array.isArray(input)) {
-        // Check if it's an array of MessageDict/MessageTuple or BaseMessage
-        if (isMessageLikeArray(input)) {
-          messages = convertMessageLikes(input);
-        } else {
-          messages = input as BaseMessage[];
-        }
       } else {
-        // ExtractionInputs object
-        if (typeof input.messages === "string") {
-          messages = [new HumanMessage({ content: input.messages })];
-        } else if (isMessageLikeArray(input.messages as unknown[])) {
-          messages = convertMessageLikes(
-            input.messages as Array<MessageDict | MessageTuple>
-          );
+        // ExtractionInputs object with { messages: [...], existing?: ... }
+        // Supports LangGraph MessagesValue format
+        if (isBaseMessageArray(input.messages as unknown[])) {
+          messages = input.messages as BaseMessage[];
+        } else if (isMessageDictArray(input.messages as unknown[])) {
+          messages = convertMessageDicts(input.messages as MessageDict[]);
         } else {
           messages = input.messages as BaseMessage[];
         }
