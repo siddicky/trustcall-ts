@@ -38,13 +38,44 @@ const extractor = createExtractor(llm, {
   tools: [UserInfo],
 });
 
-// Extract structured data
-const result = await extractor.invoke({
-  messages: "My name is Alice and I'm 30 years old",
-});
+// Extract structured data - simplest form with a string
+const result = await extractor.invoke(
+  "My name is Alice and I'm 30 years old"
+);
 
 console.log(result.responses[0]);
 // { name: "Alice", age: 30 }
+```
+
+## Input Formats
+
+The extractor supports multiple input formats:
+
+```typescript
+// 1. Simple string (converted to HumanMessage internally)
+const result = await extractor.invoke("My name is Alice and I'm 30");
+
+// 2. Single BaseMessage
+import { HumanMessage } from "@langchain/core/messages";
+const result = await extractor.invoke(
+  new HumanMessage("My name is Alice and I'm 30")
+);
+
+// 3. Array of BaseMessage (LangGraph MessagesValue compatible)
+const result = await extractor.invoke({
+  messages: [new HumanMessage("My name is Alice and I'm 30")],
+});
+
+// 4. OpenAI-style message dict format
+const result = await extractor.invoke({
+  messages: [{ role: "user", content: "My name is Alice and I'm 30" }],
+});
+
+// 5. With existing data for updates
+const result = await extractor.invoke({
+  messages: [{ role: "user", content: "Change my age to 31" }],
+  existing: { UserInfo: { name: "Alice", age: 30 } },
+});
 ```
 
 ## Features
@@ -108,7 +139,7 @@ const extractor = createExtractor(llm, {
 });
 
 const result = await extractor.invoke({
-  messages: "I now prefer dark theme and add purple to my colors",
+  messages: [{ role: "user", content: "I now prefer dark theme and add purple to my colors" }],
   existing,
 });
 
