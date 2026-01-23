@@ -93,7 +93,7 @@ export class ValidationNode {
   }
 
   private jsonSchemaToZod(
-    schema: Record<string, unknown>
+    _schema: Record<string, unknown>
   ): z.ZodSchema {
     // Simplified JSON Schema to Zod conversion
     // In production, you'd want a more robust implementation
