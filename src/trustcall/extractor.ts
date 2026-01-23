@@ -299,7 +299,8 @@ export function createExtractor(
     enableInserts = false,
     enableUpdates = true,
     enableDeletes = false,
-    existingSchemaPolicy = true,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    existingSchemaPolicy: _existingSchemaPolicy = true,
   } = options;
 
   // Convert tools to schemas
