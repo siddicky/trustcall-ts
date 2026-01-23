@@ -1,14 +1,15 @@
 /**
  * TrustCallJS - Basic Extraction Example
  *
- * Run with: deno run --allow-env --allow-net examples/basic-extraction.ts
+ * Run with:
+ *   - Node.js: npx ts-node examples/basic-extraction.ts
+ *   - Deno: deno run --allow-env --allow-net examples/basic-extraction.ts
  */
 
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage } from "@langchain/core/messages";
 import { createExtractor } from "../dist/trustcall/index.js";
-import { config } from "dotenv";
 
 // Define schemas for extraction
 const UserInfo = z
@@ -35,8 +36,7 @@ const CompanyProfile = z
 
 async function main() {
   // Check for API key
-  const apiKey = config({ path: "./.env" }).parsed?.OPENAI_API_KEY;
-  console.log("Using OPENAI_API_KEY:", apiKey ? "FOUND" : "NOT FOUND");
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error("Please set OPENAI_API_KEY environment variable");
     process.exit(1);
@@ -44,8 +44,8 @@ async function main() {
 
   // Initialize the LLM
   const llm = new ChatOpenAI({
-    model: "gpt-5-mini",
-    reasoningEffort: "low",
+    model: "gpt-4o-mini",
+    temperature: 0,
   });
 
   // ==================================================
@@ -61,7 +61,10 @@ async function main() {
     "My name is Alice Johnson and I'm 30 years old. Email me at alice@example.com"
   );
 
-  console.log("Extracted user:", JSON.stringify(userResult, null, 2));
+  console.log(
+    "Extracted user:",
+    JSON.stringify(userResult.responses[0], null, 2)
+  );
   console.log(`Attempts needed: ${userResult.attempts}\n`);
 
   // ==================================================
