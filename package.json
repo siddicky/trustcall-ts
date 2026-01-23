@@ -37,6 +37,7 @@
   "dependencies": {
     "@langchain/core": "^0.3.0",
     "@langchain/langgraph": "^0.2.0",
+    "langchain": "^1.2.12",
     "uuid": "^9.0.0",
     "zod": "^3.22.0",
     "zod-to-json-schema": "^3.22.0"
