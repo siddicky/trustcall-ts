@@ -107,8 +107,9 @@ function convertMessageDicts(messages: MessageDict[]): BaseMessage[] {
 /**
  * Extraction inputs type.
  *
- * The `messages` field supports LangGraph's MessagesValue annotation format:
- * - Array of BaseMessage instances
+ * The `messages` field supports multiple formats:
+ * - A string (converted to HumanMessage internally)
+ * - Array of BaseMessage instances (LangGraph MessagesValue compatible)
  * - Array of MessageDict (OpenAI-style { role, content })
  *
  * For simple extraction, you can also call invoke() directly with:
@@ -116,7 +117,7 @@ function convertMessageDicts(messages: MessageDict[]): BaseMessage[] {
  * - A single BaseMessage
  */
 export interface ExtractionInputs {
-  messages: BaseMessage[] | MessageDict[];
+  messages: string | BaseMessage[] | MessageDict[];
   existing?: ExistingType;
 }
 
@@ -698,12 +699,20 @@ ${schemaStrings.join("\n")}
         // Single BaseMessage input
         messages = [input];
       } else {
-        // ExtractionInputs object with { messages: [...], existing?: ... }
-        // Supports LangGraph MessagesValue format
-        if (isBaseMessageArray(input.messages as unknown[])) {
-          messages = input.messages as BaseMessage[];
-        } else if (isMessageDictArray(input.messages as unknown[])) {
-          messages = convertMessageDicts(input.messages as MessageDict[]);
+        // ExtractionInputs object with { messages: ..., existing?: ... }
+        // Supports string, array of BaseMessage, or array of MessageDict
+        if (typeof input.messages === "string") {
+          messages = [new HumanMessage({ content: input.messages })];
+        } else if (
+          Array.isArray(input.messages) &&
+          isBaseMessageArray(input.messages)
+        ) {
+          messages = input.messages;
+        } else if (
+          Array.isArray(input.messages) &&
+          isMessageDictArray(input.messages)
+        ) {
+          messages = convertMessageDicts(input.messages);
         } else {
           messages = input.messages as BaseMessage[];
         }
@@ -778,12 +787,20 @@ ${schemaStrings.join("\n")}
         // Single BaseMessage input
         messages = [input];
       } else {
-        // ExtractionInputs object with { messages: [...], existing?: ... }
-        // Supports LangGraph MessagesValue format
-        if (isBaseMessageArray(input.messages as unknown[])) {
-          messages = input.messages as BaseMessage[];
-        } else if (isMessageDictArray(input.messages as unknown[])) {
-          messages = convertMessageDicts(input.messages as MessageDict[]);
+        // ExtractionInputs object with { messages: ..., existing?: ... }
+        // Supports string, array of BaseMessage, or array of MessageDict
+        if (typeof input.messages === "string") {
+          messages = [new HumanMessage({ content: input.messages })];
+        } else if (
+          Array.isArray(input.messages) &&
+          isBaseMessageArray(input.messages)
+        ) {
+          messages = input.messages;
+        } else if (
+          Array.isArray(input.messages) &&
+          isMessageDictArray(input.messages)
+        ) {
+          messages = convertMessageDicts(input.messages);
         } else {
           messages = input.messages as BaseMessage[];
         }
