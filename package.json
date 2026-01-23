@@ -44,6 +44,7 @@
     "zod-to-json-schema": "^3.22.0"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.52.0",
     "@langchain/anthropic": "^0.3.0",
     "@langchain/openai": "^0.3.0",
     "@types/node": "^20.10.0",
