@@ -7,7 +7,7 @@
       "ES2022"
     ],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./src/trustcall",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -18,7 +18,7 @@
     "resolveJsonModule": true
   },
   "include": [
-    "src/**/*"
+    "src/trustcall/**/*"
   ],
   "exclude": [
     "node_modules",
