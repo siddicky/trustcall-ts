@@ -1,6 +1,6 @@
 {
   "name": "trustcalljs",
-  "version": "0.2.11",
+  "version": "0.2.9",
   "description": "Utilities for validated tool calling and extraction with retries using LLMs - TypeScript port of trustcall",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
