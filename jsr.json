@@ -6,7 +6,7 @@
   },
   "publish": {
     "include": [
-      "src/**/*.ts",
+      "src/trustcall/**/*.ts",
       "README.md",
       "LICENSE"
     ],
