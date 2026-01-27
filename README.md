@@ -4,10 +4,32 @@ TypeScript port of [trustcall](https://github.com/hinthornw/trustcall) - Utiliti
 
 Built on top of [@langchain/langgraph](https://github.com/langchain-ai/langgraphjs).
 
+**Cross-runtime support:** Works with Node.js, Deno, and Bun!
+
 ## Installation
+
+### Node.js / Bun
 
 ```bash
 npm install trustcalljs @langchain/langgraph @langchain/core
+```
+
+### Deno
+
+```typescript
+import { createExtractor } from "jsr:@siddicky/trustcall";
+import { ChatOpenAI } from "npm:@langchain/openai";
+import { z } from "npm:zod";
+```
+
+Or add to your `deno.json`:
+
+```json
+{
+  "imports": {
+    "@siddicky/trustcall": "jsr:@siddicky/trustcall@^0.2.9"
+  }
+}
 ```
 
 ## Why TrustCallJS?

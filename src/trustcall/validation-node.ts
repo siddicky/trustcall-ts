@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  AIMessage,
-  BaseMessage,
+  type AIMessage,
+  type BaseMessage,
   ToolMessage,
   isAIMessage,
 } from "@langchain/core/messages";

@@ -1,4 +1,4 @@
-import { AIMessage, BaseMessage, ToolMessage } from "@langchain/core/messages";
+import { AIMessage, type BaseMessage, ToolMessage } from "@langchain/core/messages";
 import type { ToolCall, MessageOp } from "./types.js";
 
 /**
