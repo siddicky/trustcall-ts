@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
+import { uuidv4 } from "./uuid.js";
 import {
   AIMessage,
-  BaseMessage,
+  type BaseMessage,
   HumanMessage,
   SystemMessage,
   ToolMessage,
@@ -129,6 +129,20 @@ export interface ExtractionOutputs {
   responses: z.infer<z.ZodSchema>[];
   responseMetadata: Array<{ id: string; jsonDocId?: string }>;
   attempts: number;
+}
+
+/**
+ * Extractor interface returned by createExtractor.
+ */
+export interface Extractor {
+  invoke(
+    input: ExtractionInputs | string | BaseMessage,
+    config?: RunnableConfig
+  ): Promise<ExtractionOutputs>;
+  stream(
+    input: ExtractionInputs | string | BaseMessage,
+    config?: RunnableConfig
+  ): Promise<AsyncIterable<unknown>>;
 }
 
 /**
@@ -276,7 +290,7 @@ function ensureTools(tools: ToolType[]): Map<string, z.ZodSchema> {
  * // { name: "Alice", age: 30 }
  * ```
  */
-export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
+export function createExtractor(llm: BaseChatModel, options: ExtractorOptions): Extractor {
   // Verify the LLM supports tool binding
   if (!llm.bindTools) {
     throw new Error(

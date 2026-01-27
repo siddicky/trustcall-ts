@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 import type { BaseMessage } from "@langchain/core/messages";
 import type { StructuredToolInterface } from "@langchain/core/tools";
 

@@ -12,6 +12,7 @@ export {
   createExtractor,
   type ExtractionInputs,
   type ExtractionOutputs,
+  type Extractor,
   type ExtractorOptions,
   type MessageDict,
 } from "./extractor.js";

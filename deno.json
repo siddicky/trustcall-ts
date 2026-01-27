@@ -1,0 +1,22 @@
+{
+  "name": "@siddicky/trustcall",
+  "version": "0.2.9",
+  "exports": {
+    ".": "./src/trustcall/index.ts"
+  },
+  "publish": {
+    "include": [
+      "src/trustcall/**/*.ts",
+      "README.md",
+      "LICENSE"
+    ],
+    "exclude": [
+      "src/**/*.test.ts",
+      "tests/**/*"
+    ]
+  },
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "strict": true
+  }
+}
