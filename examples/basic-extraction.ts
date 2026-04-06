@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage } from "@langchain/core/messages";
-import { createExtractor } from "../dist/trustcall/index.js";
+import { createExtractor } from "trustcalljs";
 
 // Define schemas for extraction
 const UserInfo = z
@@ -44,8 +44,7 @@ async function main() {
 
   // Initialize the LLM
   const llm = new ChatOpenAI({
-    model: "gpt-4o-mini",
-    temperature: 0,
+    model: "gpt-5.4-mini",
   });
 
   // ==================================================

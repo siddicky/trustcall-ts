@@ -4,7 +4,7 @@
   "exports": "./basic-extraction.ts",
   "nodeModulesDir": "auto",
   "imports": {
-    "trustcalljs": "../dist/trustcall/index.js",
+    "trustcalljs": "npm:trustcalljs@^0.3.0",
     "zod": "npm:zod@^3.22.0",
     "uuid": "npm:uuid@^9.0.0",
     "zod-to-json-schema": "npm:zod-to-json-schema@^3.22.0",
