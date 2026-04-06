@@ -22,7 +22,10 @@ export {
 } from "./validation-node.js";
 
 export {
+  isZodSchema,
+  getSchemaName,
   type SchemaInstance,
   type ExistingType,
   type ToolType,
+  type MessageOp,
 } from "./types.js";

@@ -24,6 +24,8 @@ export function getHistoryForToolCall(
           const filtered = new AIMessage({
             content: String(msg.content),
             tool_calls: relevantCalls,
+            additional_kwargs: { ...msg.additional_kwargs },
+            response_metadata: { ...msg.response_metadata },
           });
           filtered.id = msg.id;
           results.unshift(filtered);
@@ -73,6 +75,8 @@ export function applyMessageOps(
                 name: string;
                 args: Record<string, unknown>;
               }>,
+              additional_kwargs: { ...m.additional_kwargs },
+              response_metadata: { ...m.response_metadata },
             });
             updated.id = m.id;
             return updated;
@@ -95,6 +99,8 @@ export function applyMessageOps(
                 name: string;
                 args: Record<string, unknown>;
               }>,
+              additional_kwargs: { ...m.additional_kwargs },
+              response_metadata: { ...m.response_metadata },
             });
             updated.id = m.id;
             return updated;

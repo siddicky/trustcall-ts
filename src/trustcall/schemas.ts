@@ -5,20 +5,22 @@ import { z } from "zod";
  */
 export const JsonPatchSchema = z.object({
   op: z
-    .enum(["add", "remove", "replace"])
-    .describe(
+.enum(["add", "remove", "replace"])
+.describe(
       "The operation to be performed. Must be one of 'add', 'remove', 'replace'."
     ),
   path: z
     .string()
     .describe(
-      "A JSON Pointer path that references a location within the target document."
+      "A JSON Pointer path that references a location within the target document where the operation is performed. Note: patches are applied sequentially. If you remove a value, the collection size changes before the next patch is applied."
     ),
   value: z
-    .any()
-    .optional()
+    .unknown()
     .describe(
-      "The value to be used within the operation. REQUIRED for 'add', 'replace' operations."
+      "The value to be used within the operation. REQUIRED for" +
+      " 'add', 'replace', and 'test' operations." +
+      " Pay close attention to the json schema to ensure" +
+      " the patched document will be valid."
     ),
 });
 
@@ -32,12 +34,12 @@ export const PatchFunctionErrorsSchema = z.object({
   planned_edits: z
     .string()
     .describe(
-      "A bullet-point list of each ValidationError and the corresponding JSONPatch operation needed to fix it."
+      "Second, write a bullet-point list of each ValidationError you encountered and the corresponding JSONPatch operation needed to heal it. For each operation, write why your initial guess was incorrect, citing the corresponding types(s) from the JSONSchema that will be used to validate the resultant patched document. Think step-by-step to ensure no error is overlooked."
     ),
   patches: z
     .array(JsonPatchSchema)
     .describe(
-      "A list of JSONPatch operations to be applied to the previous tool call's arguments."
+      "Finally, provide a list of JSONPatch operations to be applied to the previous tool call's response arguments. If none are required, return an empty list. This field is REQUIRED. Multiple patches in the list are applied sequentially in the order provided, with each patch building upon the result of the previous one."
     ),
 });
 
@@ -51,12 +53,12 @@ export const PatchDocSchema = z.object({
   planned_edits: z
     .string()
     .describe(
-      "Think step-by-step, reasoning over each required update and the corresponding JSONPatch operation."
+      "Seconds, think step-by-step, reasoning over each required update and the corresponding JSONPatch operation to accomplish it. Cite the fields in the JSONSchema you referenced in developing this plan. Address each path as a group; don't switch between paths. Plan your patches in the following order:1. replace - this keeps collection size the same.2. remove - BE CAREFUL ABOUT ORDER OF OPERATIONS. Each operation is applied sequentially. For arrays, remove the highest indexed value first to avoid shifting indices. This ensures subsequent remove operations remain valid.3. add (for arrays, use /- to efficiently append to end)."
     ),
   patches: z
     .array(JsonPatchSchema)
     .describe(
-      "A list of JSONPatch operations to be applied to the existing document."
+      "Finally, provide a list of JSONPatch operations to be applied to the existing document. Take care to respect array bounds. Order patches as follows:\n 1. replace - this keeps collection size the same\n 2. remove - BE CAREFUL about order of operations. For arrays, remove the highest indexed value first to avoid shifting indices.\n 3. add - for arrays, use /- to efficiently append to end."
     ),
 });
 

@@ -9,7 +9,7 @@ export interface SchemaInstance {
   /** A unique identifier for this schema instance */
   recordId: string;
   /** The name of the schema that this instance conforms to */
-  schemaName: string;
+  schemaName: string | "__any__";
   /** The actual data of the record */
   record: Record<string, unknown>;
 }
@@ -66,6 +66,26 @@ export interface ExtractionState {
   existing?: ExistingType;
 }
 
+export function isZodSchema(value: unknown): value is z.ZodSchema {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "_def" in value &&
+    typeof (value as z.ZodSchema).parse === "function"
+  );
+}
+
+export function getSchemaName(schema: z.ZodSchema, fallback: string): string {
+  if (schema.description) {
+    return schema.description;
+  }
+  const def = schema._def as { description?: string };
+  if (def.description) {
+    return def.description;
+  }
+  return fallback;
+}
+
 /**
  * Extended extraction state for patching operations.
  */
@@ -86,5 +106,5 @@ export interface DeletionState extends ExtractionState {
  */
 export interface MessageOp {
   op: "delete" | "update_tool_call" | "update_tool_name";
-  target: string | ToolCall;
+  target: string | ToolCall | { id: string; name: string };
 }

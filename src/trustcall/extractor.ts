@@ -16,11 +16,14 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 
 import type {
   ExistingType,
+  MessageOp,
   SchemaInstance,
   ToolCall,
   ToolType,
 } from "./types.js";
+import { isZodSchema, getSchemaName } from "./types.js";
 import { applyJsonPatches, ensurePatches } from "./json-patch.js";
+import { applyMessageOps, getHistoryForToolCall } from "./utils.js";
 import {
   PatchDocSchema,
   PatchFunctionErrorsSchema,
@@ -155,18 +158,43 @@ export interface ExtractorOptions {
 // State annotation for the extraction graph
 const ExtractionStateAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
-    reducer: (curr, update) => {
-      if (!curr) return update;
-      return [...curr, ...update];
+    reducer: (curr: BaseMessage[] | undefined, update: any) => {
+      const currentMessages = curr ?? [];
+      const nextItems = Array.isArray(update) ? update : [];
+      const nextMessages: BaseMessage[] = [];
+      const messageOps: MessageOp[] = [];
+
+      for (const item of nextItems) {
+        if (isBaseMessage(item)) {
+          nextMessages.push(item);
+          continue;
+        }
+
+        if (
+          item &&
+          typeof item === "object" &&
+          "op" in item &&
+          "target" in item
+        ) {
+          messageOps.push(item as MessageOp);
+        }
+      }
+
+      const combinedMessages = [...currentMessages, ...nextMessages];
+      if (messageOps.length === 0) {
+        return combinedMessages;
+      }
+
+      return applyMessageOps(combinedMessages, messageOps);
     },
     default: () => [],
   }),
   attempts: Annotation<number>({
-    reducer: (curr, update) => (curr || 0) + update,
+    reducer: (curr: number | undefined, update: number) => (curr || 0) + update,
     default: () => 0,
   }),
   msgId: Annotation<string>({
-    reducer: (curr, update) => curr || update,
+    reducer: (curr: string | undefined, update: string) => curr || update,
     default: () => "",
   }),
   existing: Annotation<ExistingType | undefined>,
@@ -189,33 +217,6 @@ function zodToOpenAIFunction(schema: z.ZodObject<z.ZodRawShape>, name: string) {
   };
 }
 
-/**
- * Check if a value is a Zod schema (any ZodType).
- */
-function isZodSchema(value: unknown): value is z.ZodSchema {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "_def" in value &&
-    typeof (value as z.ZodSchema).parse === "function"
-  );
-}
-
-/**
- * Get the name/description from a Zod schema.
- */
-function getSchemaName(schema: z.ZodSchema, fallback: string): string {
-  // Try to get description from the schema
-  if (schema.description) {
-    return schema.description;
-  }
-  // Check _def.description as fallback
-  const def = schema._def as { description?: string };
-  if (def.description) {
-    return def.description;
-  }
-  return fallback;
-}
 
 /**
  * Convert tools to a standardized format.
@@ -296,8 +297,7 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
     enableInserts = false,
     enableUpdates = true,
     enableDeletes = false,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    existingSchemaPolicy: _existingSchemaPolicy = true,
+    existingSchemaPolicy = true,
   } = options;
 
   // Convert tools to schemas
@@ -308,6 +308,62 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
   toolSchemas.set("PatchDoc", PatchDocSchema);
   toolSchemas.set("PatchFunctionErrors", PatchFunctionErrorsSchema);
 
+  // Register RemoveDoc as a passthrough since it's dynamically created per-invocation
+  if (enableDeletes) {
+    toolSchemas.set("RemoveDoc", z.object({ json_doc_id: z.string() }).passthrough());
+  }
+
+  /**
+   * Validate existing data against known schemas based on existingSchemaPolicy.
+   * - true (default): throw on unknown schemas
+   * - false: treat unknown schemas as generic dicts (passthrough)
+   * - "ignore": silently drop unknown schemas
+   */
+  function validateExisting(existing: ExistingType): ExistingType {
+    if (existingSchemaPolicy === "ignore" || existingSchemaPolicy === false) {
+      if (typeof existing === "object" && !Array.isArray(existing)) {
+        const validated: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(existing)) {
+          if (toolNames.includes(key) || key === "__any__") {
+            validated[key] = value;
+          } else if (existingSchemaPolicy === false) {
+            validated[key] = value; // Keep as generic dict
+          }
+          // "ignore" mode: silently skip unknown keys
+        }
+        return validated;
+      } else if (Array.isArray(existing)) {
+        return existing.filter((item: SchemaInstance | [string, string, Record<string, unknown>]) => {
+          const schemaName = Array.isArray(item) ? item[1] : (item as SchemaInstance).schemaName;
+          if (toolNames.includes(schemaName) || schemaName === "__any__") return true;
+          if (existingSchemaPolicy === false) return true;
+          return false; // "ignore" mode: drop unknown
+        }) as ExistingType;
+      }
+    } else {
+      // true (default): throw on unknown schemas
+      if (typeof existing === "object" && !Array.isArray(existing)) {
+        for (const key of Object.keys(existing)) {
+          if (!toolNames.includes(key) && key !== "__any__") {
+            throw new Error(
+              `Key '${key}' doesn't match any schema. Known schemas: ${toolNames.join(", ")}`
+            );
+          }
+        }
+      } else if (Array.isArray(existing)) {
+        for (let i = 0; i < existing.length; i++) {
+          const item = existing[i];
+          const schemaName = Array.isArray(item) ? item[1] : (item as SchemaInstance).schemaName;
+          if (!toolNames.includes(schemaName) && schemaName !== "__any__") {
+            throw new Error(
+              `Unknown schema '${schemaName}' at index ${i}. Known schemas: ${toolNames.join(", ")}`
+            );
+          }
+        }
+      }
+    }
+    return existing;
+  }
   // Create validation node
   const validator = new ValidationNode(
     Array.from(toolSchemas.entries()).map(([name, schema]) => {
@@ -380,6 +436,9 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
       throw new Error("No existing schemas provided.");
     }
 
+    // Validate existing data against known schemas
+    const validatedExisting = validateExisting(existing);
+
     // Build the update tools
     const updateTools: Array<{
       type: "function";
@@ -403,8 +462,8 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
 
     // Build existing schemas context
     const schemaStrings: string[] = [];
-    if (typeof existing === "object" && !Array.isArray(existing)) {
-      for (const [k, v] of Object.entries(existing)) {
+    if (typeof validatedExisting === "object" && !Array.isArray(validatedExisting)) {
+      for (const [k, v] of Object.entries(validatedExisting)) {
         const schema = toolSchemas.get(k);
         const schemaJson = isZodSchema(schema)
           ? JSON.stringify(zodToJsonSchema(schema as z.ZodSchema), null, 2)
@@ -413,16 +472,24 @@ export function createExtractor(llm: BaseChatModel, options: ExtractorOptions) {
           `<schema id="${k}">\n<instance>\n${JSON.stringify(v, null, 2)}\n</instance>\n<json_schema>\n${schemaJson}\n</json_schema></schema>`
         );
       }
-    } else if (Array.isArray(existing)) {
-      for (const item of existing) {
+    } else if (Array.isArray(validatedExisting)) {
+      for (const item of validatedExisting) {
         if (Array.isArray(item)) {
           const [id, typeName, record] = item;
+          const schema = toolSchemas.get(typeName);
+          const schemaJson = isZodSchema(schema)
+            ? JSON.stringify(zodToJsonSchema(schema as z.ZodSchema), null, 2)
+            : "object";
           schemaStrings.push(
-            `<instance id="${id}" schema_type="${typeName}">\n${JSON.stringify(record, null, 2)}\n</instance>`
+            `<instance id="${id}" schema_type="${typeName}">\n${JSON.stringify(record, null, 2)}\n</instance>\n<json_schema>\n${schemaJson}\n</json_schema>`
           );
         } else {
+          const schema = toolSchemas.get(item.schemaName);
+          const schemaJson = isZodSchema(schema)
+            ? JSON.stringify(zodToJsonSchema(schema as z.ZodSchema), null, 2)
+            : "object";
           schemaStrings.push(
-            `<instance id="${item.recordId}" schema_type="${item.schemaName}">\n${JSON.stringify(item.record, null, 2)}\n</instance>`
+            `<instance id="${item.recordId}" schema_type="${item.schemaName}">\n${JSON.stringify(item.record, null, 2)}\n</instance>\n<json_schema>\n${schemaJson}\n</json_schema>`
           );
         }
       }
@@ -450,12 +517,12 @@ ${schemaStrings.join("\n")}
 
     // Handle deletions
     let removalSchema: z.ZodSchema | undefined;
-    if (enableDeletes && existing) {
-      const existingIds = Array.isArray(existing)
-        ? existing.map((e) =>
+    if (enableDeletes && validatedExisting) {
+      const existingIds = Array.isArray(validatedExisting)
+        ? validatedExisting.map((e) =>
             Array.isArray(e) ? e[0] : (e as SchemaInstance).recordId
           )
-        : Object.keys(existing);
+        : Object.keys(validatedExisting);
       removalSchema = createRemoveDocSchema(existingIds);
       updateTools.push(
         zodToOpenAIFunction(
@@ -485,11 +552,11 @@ ${schemaStrings.join("\n")}
           let target: Record<string, unknown> | undefined;
           let toolName: string;
 
-          if (typeof existing === "object" && !Array.isArray(existing)) {
-            target = existing[jsonDocId] as Record<string, unknown>;
+          if (typeof validatedExisting === "object" && !Array.isArray(validatedExisting)) {
+            target = validatedExisting[jsonDocId] as Record<string, unknown>;
             toolName = jsonDocId;
-          } else if (Array.isArray(existing)) {
-            const found = existing.find((e) =>
+          } else if (Array.isArray(validatedExisting)) {
+            const found = validatedExisting.find((e) =>
               Array.isArray(e) ? e[0] === jsonDocId : e.recordId === jsonDocId
             );
             if (found) {
@@ -584,7 +651,8 @@ ${schemaStrings.join("\n")}
     const boundLlm = toolLlm.bindTools(patchTools, { tool_choice: "any" });
 
     try {
-      const response = await boundLlm.invoke(state.messages, config);
+      const filteredMessages = getHistoryForToolCall(state.messages, state.toolCallId);
+      const response = await boundLlm.invoke(filteredMessages, config);
       const aiMessage = response as AIMessage;
 
       // Apply patches to fix errors
@@ -630,12 +698,27 @@ ${schemaStrings.join("\n")}
         }
       }
 
+      messageOps.push({
+        op: "delete",
+        target: state.toolCallId,
+      });
+
       return {
+        messages: [aiMessage, ...messageOps] as any,
         attempts: state.bumpAttempt ? 1 : 0,
       };
     } catch {
       return {};
     }
+  }
+
+  // Delete tool call node - removes successful validation ToolMessages
+  function delToolCall(
+    state: typeof ExtractionStateAnnotation.State
+  ): Partial<typeof ExtractionStateAnnotation.State> {
+    return {
+      messages: [{ op: "delete", target: state.toolCallId }] as any,
+    };
   }
 
   // Entry routing
@@ -648,12 +731,22 @@ ${schemaStrings.join("\n")}
     return "extract";
   }
 
+  function findLastAiMessage(messages: BaseMessage[]): AIMessage | undefined {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (isAIMessage(msg)) {
+        return msg;
+      }
+    }
+    return undefined;
+  }
+
   // Validation routing
   function validateOrRetry(
     state: typeof ExtractionStateAnnotation.State
   ): "validate" | "extractUpdates" {
-    const lastMsg = state.messages[state.messages.length - 1];
-    if (isAIMessage(lastMsg)) {
+    const lastMsg = findLastAiMessage(state.messages);
+    if (lastMsg) {
       return "validate";
     }
     return "extractUpdates";
@@ -671,7 +764,8 @@ ${schemaStrings.join("\n")}
       return END;
     }
 
-    const sends: Send[] = [];
+    const patchSends: Send[] = [];
+    const delSends: Send[] = [];
     let bumped = false;
 
     // Check for validation errors
@@ -682,7 +776,7 @@ ${schemaStrings.join("\n")}
       if (msg instanceof ToolMessage) {
         const isError = msg.additional_kwargs?.is_error;
         if (isError) {
-          sends.push(
+          patchSends.push(
             new Send("patch", {
               ...state,
               toolCallId: msg.tool_call_id,
@@ -690,11 +784,26 @@ ${schemaStrings.join("\n")}
             })
           );
           bumped = true;
+        } else {
+          // Queue successful validation ToolMessages for deletion
+          // to avoid mixing branches during fan-in
+          delSends.push(
+            new Send("delToolCall", {
+              ...state,
+              toolCallId: String(msg.id),
+            })
+          );
         }
       }
     }
 
-    return sends.length > 0 ? sends : END;
+    // Only send delToolCall when we also have patches to apply.
+    // If all validations passed (no errors), just END.
+    if (patchSends.length > 0) {
+      return [...patchSends, ...delSends];
+    }
+
+    return END;
   }
 
   // Build the graph
@@ -703,11 +812,13 @@ ${schemaStrings.join("\n")}
     .addNode("extractUpdates", extractUpdates)
     .addNode("validate", validate)
     .addNode("patch", patch)
+    .addNode("delToolCall", delToolCall)
     .addConditionalEdges(START, enter)
     .addEdge("extract", "validate")
     .addConditionalEdges("extractUpdates", validateOrRetry)
-    .addConditionalEdges("validate", handleRetries, ["patch", END])
-    .addEdge("patch", "validate");
+    .addConditionalEdges("validate", handleRetries, ["patch", "delToolCall", END])
+    .addEdge("patch", "validate")
+    .addEdge("delToolCall", "validate");
 
   const compiled = builder.compile();
 
@@ -788,8 +899,8 @@ ${schemaStrings.join("\n")}
             id: tc.id || "",
             jsonDocId: updatedDocs[tc.id || ""],
           });
-        } catch (e) {
-          console.error(`Validation failed for ${tc.name}:`, e);
+        } catch {
+          // Silently skip tool calls that fail final validation
         }
       }
 

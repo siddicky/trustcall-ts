@@ -8,6 +8,7 @@ import {
 import type { RunnableConfig } from "@langchain/core/runnables";
 import type { StructuredToolInterface } from "@langchain/core/tools";
 import type { ToolCall, ToolType } from "./types.js";
+import { isZodSchema, getSchemaName } from "./types.js";
 
 export interface ValidationNodeOptions {
   /** Custom error formatter */
@@ -29,33 +30,6 @@ function defaultFormatError(
   return `${error.message}\n\nRespond after fixing all validation errors.`;
 }
 
-/**
- * Check if a value is a Zod schema (any ZodType).
- */
-function isZodSchema(value: unknown): value is z.ZodSchema {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "_def" in value &&
-    typeof (value as z.ZodSchema).parse === "function"
-  );
-}
-
-/**
- * Get the name/description from a Zod schema.
- */
-function getSchemaName(schema: z.ZodSchema, fallback: string): string {
-  // Try to get description from the schema
-  if (schema.description) {
-    return schema.description;
-  }
-  // Check _def.description as fallback
-  const def = schema._def as { description?: string };
-  if (def.description) {
-    return def.description;
-  }
-  return fallback;
-}
 
 /**
  * A node that validates all tool calls from the last AIMessage.
@@ -110,10 +84,81 @@ export class ValidationNode {
     );
   }
 
-  private jsonSchemaToZod(_schema: Record<string, unknown>): z.ZodSchema {
-    // Simplified JSON Schema to Zod conversion
-    // In production, you'd want a more robust implementation
-    return z.object({}).passthrough();
+  private jsonSchemaToZod(schema: Record<string, unknown>): z.ZodSchema {
+    return this._convertJsonSchema(schema);
+  }
+
+  /**
+   * Recursively convert a JSON Schema object to a Zod schema.
+   * Handles common types: string, number, integer, boolean, null, array, object, enum.
+   * Falls back to z.unknown() for unsupported features.
+   */
+  private _convertJsonSchema(schema: Record<string, unknown>): z.ZodSchema {
+    if (!schema || typeof schema !== 'object') {
+      return z.unknown();
+    }
+
+    // Handle enum
+    if (Array.isArray(schema.enum)) {
+      const values = schema.enum as [string, ...string[]];
+      if (values.length > 0 && values.every((v) => typeof v === 'string')) {
+        return z.enum(values as [string, ...string[]]);
+      }
+      const literals = values.map((v) => z.literal(v as string | number | boolean));
+      if (literals.length >= 2) {
+        return z.union(literals as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+      }
+      return literals[0] ?? z.unknown();
+    }
+
+    // Handle const
+    if ('const' in schema) {
+      return z.literal(schema.const as string | number | boolean);
+    }
+
+    const type = schema.type as string | undefined;
+
+    switch (type) {
+      case 'string':
+        return z.string();
+      case 'number':
+      case 'integer':
+        return z.number();
+      case 'boolean':
+        return z.boolean();
+      case 'null':
+        return z.null();
+      case 'array': {
+        const items = schema.items as Record<string, unknown> | undefined;
+        if (items) {
+          return z.array(this._convertJsonSchema(items));
+        }
+        return z.array(z.unknown());
+      }
+      case 'object': {
+        const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+        const required = (schema.required as string[]) || [];
+        if (properties) {
+          const shape: Record<string, z.ZodTypeAny> = {};
+          for (const [key, propSchema] of Object.entries(properties)) {
+            const converted = this._convertJsonSchema(propSchema);
+            shape[key] = required.includes(key) ? converted : converted.optional();
+          }
+          if (schema.additionalProperties !== false) {
+            return z.object(shape).passthrough();
+          }
+          return z.object(shape);
+        }
+        return z.object({}).passthrough();
+      }
+      default:
+        // No type specified or unsupported type
+        if (schema.properties) {
+          // Treat as object if it has properties
+          return this._convertJsonSchema({ ...schema, type: 'object' });
+        }
+        return z.unknown();
+    }
   }
 
   /**

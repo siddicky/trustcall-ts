@@ -15,7 +15,7 @@ describe("JsonPatchSchema", () => {
   });
 
   it("should accept valid remove operation", () => {
-    const patch = { op: "remove", path: "/foo" };
+    const patch = { op: "remove", path: "/foo", value: null };
     const result = JsonPatchSchema.parse(patch);
     expect(result).toEqual(patch);
   });
@@ -34,6 +34,13 @@ describe("JsonPatchSchema", () => {
   it("should require path", () => {
     const patch = { op: "add", value: "bar" };
     expect(() => JsonPatchSchema.parse(patch)).toThrow();
+  });
+
+  it("should accept value field with any JSON type", () => {
+    // value accepts any JSON-compatible value including nested objects
+    const patch = { op: "replace", path: "/address", value: { street: "123 Main", city: "Portland" } };
+    const result = JsonPatchSchema.parse(patch);
+    expect(result.value).toEqual({ street: "123 Main", city: "Portland" });
   });
 });
 

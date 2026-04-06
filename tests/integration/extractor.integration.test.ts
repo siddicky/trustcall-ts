@@ -94,7 +94,7 @@ async function createLlm(
   if (provider === "openai") {
     const { ChatOpenAI } = await import("@langchain/openai");
     return new ChatOpenAI({
-      model: model || "gpt-4o-mini",
+      model: model || "gpt-5.4-mini",
       temperature,
     });
   } else {
