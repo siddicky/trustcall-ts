@@ -46,7 +46,7 @@
   "devDependencies": {
     "@dotenvx/dotenvx": "^1.52.0",
     "@langchain/anthropic": "^0.3.0",
-    "@langchain/openai": "^0.3.0",
+    "@langchain/openai": "^0.6.17",
     "@types/node": "^20.10.0",
     "@types/uuid": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
