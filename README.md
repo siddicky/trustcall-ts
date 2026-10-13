@@ -236,5 +236,3 @@ This approach is more efficient than regenerating entire outputs because:
 ## License
 
 MIT
-
-Rework verification: rework-verify-79be07fe19920821898a
